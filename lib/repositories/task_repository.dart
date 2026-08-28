@@ -1,0 +1,124 @@
+import 'package:dewwit/models/task.dart';
+import 'package:sqflite/sqflite.dart';
+
+class TaskRepository {
+  TaskRepository({DatabaseFactory? factory})
+    : _factory = factory ?? databaseFactory,
+      _databasePath = null;
+
+  TaskRepository.atPath(this._databasePath, {DatabaseFactory? factory})
+    : _factory = factory ?? databaseFactory;
+
+  static const _databaseName = 'dewwit.db';
+  static const _databaseVersion = 1;
+  static const _tasksTable = 'tasks';
+
+  final DatabaseFactory _factory;
+  final String? _databasePath;
+  Future<Database>? _database;
+
+  Future<Task> createTask(String title) async {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
+    }
+
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      DateTime.now().millisecondsSinceEpoch,
+      isUtc: true,
+    );
+    final database = await _getDatabase();
+    final id = await database.insert(_tasksTable, {
+      'title': normalizedTitle,
+      'is_completed': 0,
+      'created_at': createdAt.millisecondsSinceEpoch,
+    });
+
+    return Task(
+      id: id,
+      title: normalizedTitle,
+      isCompleted: false,
+      createdAt: createdAt,
+    );
+  }
+
+  Future<List<Task>> getTasks() async {
+    final database = await _getDatabase();
+    final rows = await database.query(
+      _tasksTable,
+      orderBy: 'created_at ASC, id ASC',
+    );
+
+    return rows.map(Task.fromMap).toList(growable: false);
+  }
+
+  Future<Task?> toggleTask(int id) async {
+    final database = await _getDatabase();
+
+    return database.transaction((transaction) async {
+      final updatedRows = await transaction.rawUpdate(
+        '''
+        UPDATE $_tasksTable
+        SET is_completed = CASE is_completed WHEN 0 THEN 1 ELSE 0 END
+        WHERE id = ?
+        ''',
+        [id],
+      );
+      if (updatedRows == 0) {
+        return null;
+      }
+
+      final rows = await transaction.query(
+        _tasksTable,
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      return Task.fromMap(rows.single);
+    });
+  }
+
+  Future<bool> deleteTask(int id) async {
+    final database = await _getDatabase();
+    final deletedRows = await database.delete(
+      _tasksTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return deletedRows > 0;
+  }
+
+  Future<void> close() async {
+    final database = _database;
+    if (database != null) {
+      await (await database).close();
+    }
+    _database = null;
+  }
+
+  Future<Database> _getDatabase() async {
+    return _database ??= _openDatabase();
+  }
+
+  Future<Database> _openDatabase() async {
+    final path =
+        _databasePath ?? '${await _factory.getDatabasesPath()}/$_databaseName';
+    return _factory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: _databaseVersion,
+        onCreate: (database, version) async {
+          await database.execute('''
+            CREATE TABLE $_tasksTable (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+              is_completed INTEGER NOT NULL DEFAULT 0
+                CHECK(is_completed IN (0, 1)),
+              created_at INTEGER NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+  }
+}

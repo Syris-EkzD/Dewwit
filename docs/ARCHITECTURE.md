@@ -125,23 +125,24 @@ Avoid creating multiple architectural layers purely for architectural appearance
 
 # Persistence
 
-Dewwit requires reliable local persistence.
+Dewwit uses a local SQLite database as the authoritative task store.
 
-The final storage implementation should be selected based on:
+The Flutter application accesses SQLite through `sqflite`. The Android
+home-screen widget should access the same database when it is implemented so
+that the application and widget do not maintain separate task state.
 
-1. Simplicity.
-2. Reliability.
-3. Flutter support.
-4. Compatibility with the Android home-screen widget.
-5. Ability for the application and widget to remain synchronized.
+V1 uses one `tasks` table:
 
-Potential options may include:
+```text
+tasks
+├── id INTEGER PRIMARY KEY AUTOINCREMENT
+├── title TEXT NOT NULL
+├── is_completed INTEGER NOT NULL
+└── created_at INTEGER NOT NULL
+```
 
-* SQLite
-* SharedPreferences/DataStore-style storage
-* Another appropriate local persistence mechanism
-
-The storage mechanism should be chosen during implementation rather than assumed prematurely.
+Completion is stored as `0` or `1`, and creation time is stored as UTC epoch
+milliseconds.
 
 No remote database is required for V1.
 
