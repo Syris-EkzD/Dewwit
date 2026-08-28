@@ -22,11 +22,16 @@ Dewwit should prioritize convenience and simplicity over having a large number o
 
 # Version 1
 
+## Status
+
+Dewwit V1 is complete and has been manually validated on a real Android
+device.
+
 ## Goal
 
-Create a small but genuinely usable Android checklist application.
+Deliver a small but genuinely usable Android checklist application.
 
-V1 should prove the complete core experience before additional productivity features are considered.
+V1 proves the complete core experience before additional productivity features are considered.
 
 ---
 
@@ -128,7 +133,9 @@ At minimum, the widget must:
 * Display Dewwit's current tasks.
 * Reflect task changes made inside the application.
 
-The implementation should also support completing tasks directly from the widget if this can be implemented reliably within the selected Android/Flutter architecture.
+The widget supports checking and unchecking tasks directly. Changes made in
+the application refresh the widget, and changes made in the widget persist to
+the same SQLite database used by the application.
 
 Widget functionality should remain simple.
 
@@ -160,16 +167,16 @@ These features may be considered after V1 works reliably.
 
 # V1 Success Criteria
 
-Dewwit V1 is considered complete when:
+Dewwit V1 meets the agreed success criteria:
 
-* A build can be installed on Android.
-* Tasks can be created.
-* Tasks appear as checklist items.
-* Tasks can be checked and unchecked.
-* Tasks can be deleted.
-* Task state survives application restarts.
-* A Dewwit Android home-screen widget can be added.
-* The widget displays saved tasks.
-* App and widget state remain synchronized reliably.
+* [x] A build can be installed on Android.
+* [x] Tasks can be created.
+* [x] Tasks appear as checklist items.
+* [x] Tasks can be checked and unchecked.
+* [x] Tasks can be deleted.
+* [x] Task state survives application restarts.
+* [x] A Dewwit Android home-screen widget can be added.
+* [x] The widget displays saved tasks.
+* [x] App and widget state remain synchronized reliably.
 
 A polished visual design is desirable but is not required for V1 completion.

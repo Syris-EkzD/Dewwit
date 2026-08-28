@@ -6,22 +6,24 @@ Its goal is simple: make creating and completing everyday tasks quick, especiall
 
 ## Status
 
-Dewwit is currently in V1 development.
+Dewwit V1 is complete and has been manually tested on a real Android device.
 
 ## V1 Features
 
 * Create checklist tasks
 * Check and uncheck tasks
 * Delete tasks
-* Offline local persistence
-* Android home-screen widget
+* Keep tasks in offline SQLite storage
+* Display current tasks in an Android home-screen widget
+* Check and uncheck tasks directly from the widget
+* Keep the application and widget synchronized through the same task database
 
 ## Tech Stack
 
 * Flutter
 * Dart
-* Android
-* Local persistence
+* Native Android widget code in Kotlin
+* SQLite through `sqflite` and Android's SQLite APIs
 
 No backend or cloud service is required for V1.
 
@@ -79,6 +81,12 @@ Run tests:
 
 ```bash
 flutter test
+```
+
+Build a debug Android APK:
+
+```bash
+flutter build apk --debug
 ```
 
 ## Project Documentation

@@ -10,15 +10,17 @@ They are not approved implementation requirements unless explicitly moved into t
 
 ## V1
 
-* [ ] Create tasks
-* [ ] Display tasks as checklist items
-* [ ] Check tasks
-* [ ] Uncheck tasks
-* [ ] Delete tasks
-* [ ] Persist tasks locally
-* [ ] Android home-screen widget
-* [ ] Synchronize application and widget state
-* [ ] Validate Android build
+Dewwit V1 is complete and has been manually tested on a real Android device.
+
+* [x] Create tasks
+* [x] Display tasks as checklist items
+* [x] Check tasks
+* [x] Uncheck tasks
+* [x] Delete tasks
+* [x] Persist tasks locally
+* [x] Android home-screen widget
+* [x] Synchronize application and widget state
+* [x] Validate Android build
 
 ---
 

@@ -2,9 +2,8 @@
 
 ## Architecture Status
 
-This document defines the architectural boundaries for Dewwit V1.
-
-Specific implementation details may change as the Android home-screen widget implementation is evaluated.
+This document describes the implemented Dewwit V1 architecture. V1 is
+complete and has been manually validated on a real Android device.
 
 ---
 
@@ -66,7 +65,8 @@ Programming language:
 Dart
 ```
 
-Android-specific code may be introduced where required for home-screen widget functionality.
+Android-specific Kotlin code implements the home-screen widget and its SQLite
+access.
 
 ---
 
@@ -74,14 +74,14 @@ Android-specific code may be introduced where required for home-screen widget fu
 
 V1 requires a minimal Task model.
 
-Conceptually:
+Implemented model:
 
 ```text
 Task
-├── id
-├── title
-├── isCompleted
-└── createdAt
+├── id: int
+├── title: String
+├── isCompleted: bool
+└── createdAt: DateTime
 ```
 
 Additional fields should only be introduced when required by an implemented feature.
@@ -117,7 +117,8 @@ deleteTask()
 
 UI code should not need to understand storage implementation details.
 
-A lightweight repository or equivalent abstraction may be used if it meaningfully separates persistence from the UI.
+A lightweight `TaskRepository` separates SQLite persistence from the Flutter
+UI.
 
 Avoid creating multiple architectural layers purely for architectural appearance.
 
@@ -127,9 +128,9 @@ Avoid creating multiple architectural layers purely for architectural appearance
 
 Dewwit uses a local SQLite database as the authoritative task store.
 
-The Flutter application accesses SQLite through `sqflite`. The Android
-home-screen widget should access the same database when it is implemented so
-that the application and widget do not maintain separate task state.
+The Flutter application accesses SQLite through `sqflite`. The native Android
+home-screen widget accesses the same database so that the application and
+widget do not maintain separate task state.
 
 V1 uses one `tasks` table:
 
