@@ -7,13 +7,22 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   late _FakeTaskRepository repository;
+  late int widgetRefreshCount;
 
   setUp(() {
     repository = _FakeTaskRepository();
+    widgetRefreshCount = 0;
   });
 
   Future<void> pumpDewwit(WidgetTester tester) async {
-    await tester.pumpWidget(DewwitApp(taskRepository: repository));
+    await tester.pumpWidget(
+      DewwitApp(
+        taskRepository: repository,
+        widgetRefresh: () async {
+          widgetRefreshCount += 1;
+        },
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -42,6 +51,7 @@ void main() {
 
     expect(find.text('Finish activity'), findsOneWidget);
     expect((await repository.getTasks()).single.title, 'Finish activity');
+    expect(widgetRefreshCount, 1);
   });
 
   testWidgets('toggles and deletes a task', (WidgetTester tester) async {
@@ -60,6 +70,21 @@ void main() {
     expect(find.text('Review networking'), findsNothing);
     expect(find.text('No tasks yet.'), findsOneWidget);
     expect(await repository.getTasks(), isEmpty);
+    expect(widgetRefreshCount, 2);
+  });
+
+  testWidgets('reloads tasks when the app resumes', (
+    WidgetTester tester,
+  ) async {
+    final task = await repository.createTask('Changed from widget');
+    await pumpDewwit(tester);
+
+    await repository.toggleTask(task.id);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
 }
 

@@ -189,7 +189,15 @@ Refresh widget
 Flutter application reads updated state
 ```
 
-The exact implementation should be established after evaluating the appropriate Flutter/Android widget integration.
+The V1 widget uses Android's native `AppWidgetProvider`, `RemoteViewsService`,
+and `RemoteViews` APIs. Its collection adapter reads the same `dewwit.db`
+SQLite database used by `sqflite`; it does not keep a second task store.
+
+Task taps send an explicit broadcast to the widget provider. The provider
+toggles the matching SQLite row and invalidates the widget collection. After a
+Flutter-side mutation, a small platform channel asks Android to perform the
+same collection refresh. The Flutter application reloads tasks when it resumes
+so changes made from the home screen are visible when the application opens.
 
 ---
 

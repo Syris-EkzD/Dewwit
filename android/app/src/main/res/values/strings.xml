@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dewwit</string>
+    <string name="widget_description">Your Dewwit checklist</string>
+    <string name="widget_empty">No tasks yet</string>
+</resources>

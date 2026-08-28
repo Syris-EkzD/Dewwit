@@ -1,5 +1,6 @@
 import 'package:dewwit/models/task.dart';
 import 'package:dewwit/repositories/task_repository.dart';
+import 'package:dewwit/services/dewwit_widget_updater.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -7,30 +8,44 @@ void main() {
 }
 
 class DewwitApp extends StatelessWidget {
-  const DewwitApp({required this.taskRepository, super.key});
+  const DewwitApp({
+    required this.taskRepository,
+    this.widgetRefresh = DewwitWidgetUpdater.refresh,
+    super.key,
+  });
 
   final TaskRepository taskRepository;
+  final Future<void> Function() widgetRefresh;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dewwit',
-      home: DewwitHomePage(taskRepository: taskRepository),
+      home: DewwitHomePage(
+        taskRepository: taskRepository,
+        widgetRefresh: widgetRefresh,
+      ),
     );
   }
 }
 
 class DewwitHomePage extends StatefulWidget {
-  const DewwitHomePage({required this.taskRepository, super.key});
+  const DewwitHomePage({
+    required this.taskRepository,
+    required this.widgetRefresh,
+    super.key,
+  });
 
   final TaskRepository taskRepository;
+  final Future<void> Function() widgetRefresh;
 
   @override
   State<DewwitHomePage> createState() => _DewwitHomePageState();
 }
 
-class _DewwitHomePageState extends State<DewwitHomePage> {
+class _DewwitHomePageState extends State<DewwitHomePage>
+    with WidgetsBindingObserver {
   List<Task> _tasks = const [];
   bool _isLoading = true;
   bool _hasLoadError = false;
@@ -38,7 +53,21 @@ class _DewwitHomePageState extends State<DewwitHomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTasks();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadTasks();
+    }
   }
 
   Future<void> _loadTasks() async {
@@ -88,6 +117,7 @@ class _DewwitHomePageState extends State<DewwitHomePage> {
   Future<void> _runMutation(Future<void> Function() mutation) async {
     try {
       await mutation();
+      await widget.widgetRefresh();
       await _loadTasks();
     } on Object {
       if (!mounted) return;
