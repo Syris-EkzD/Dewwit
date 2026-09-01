@@ -1,6 +1,17 @@
 import 'package:dewwit/settings/theme_controller.dart';
 import 'package:flutter/material.dart';
 
+const _screenHorizontalPadding = 16.0;
+const _screenTopPadding = 8.0;
+const _screenBottomPadding = 24.0;
+const _sectionTopSpacing = 16.0;
+const _sectionTitleHorizontalPadding = 4.0;
+const _sectionTitleBottomSpacing = 8.0;
+const _itemHorizontalPadding = 16.0;
+const _itemVerticalPadding = 14.0;
+const _itemIconSize = 40.0;
+const _itemIconRadius = 12.0;
+
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({required this.themeController, super.key});
 
@@ -10,23 +21,32 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
-        children: [
-          SettingsSection(
-            title: 'Appearance',
-            children: [
-              ListenableBuilder(
-                listenable: themeController,
-                builder: (context, _) => SettingsItem(
-                  icon: Icons.palette_outlined,
-                  title: 'Theme',
-                  value: _themeModeLabel(themeController.themeMode),
-                  onTap: () => _showThemeDialog(context),
-                ),
-              ),
-            ],
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            _screenHorizontalPadding,
+            _screenTopPadding,
+            _screenHorizontalPadding,
+            _screenBottomPadding,
           ),
-        ],
+          children: [
+            SettingsSection(
+              title: 'Appearance',
+              children: [
+                ListenableBuilder(
+                  listenable: themeController,
+                  builder: (context, _) => SettingsItem(
+                    icon: Icons.palette_outlined,
+                    title: 'Theme',
+                    description: 'Choose how Dewwit looks',
+                    value: _themeModeLabel(themeController.themeMode),
+                    onTap: () => _showThemeDialog(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -34,24 +54,25 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _showThemeDialog(BuildContext context) async {
     final selectedMode = await showDialog<ThemeMode>(
       context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Theme'),
-        children: ThemeMode.values.map((mode) {
-          final isSelected = mode == themeController.themeMode;
-          return SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, mode),
-            child: Row(
-              children: [
-                Expanded(child: Text(_themeModeLabel(mode))),
-                if (isSelected)
-                  Icon(
-                    Icons.check,
-                    color: Theme.of(context).colorScheme.primary,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose theme'),
+        content: RadioGroup<ThemeMode>(
+          groupValue: themeController.themeMode,
+          onChanged: (mode) => Navigator.pop(context, mode),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ThemeMode.values
+                .map(
+                  (mode) => RadioListTile<ThemeMode>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_themeModeLabel(mode)),
+                    subtitle: Text(_themeModeDescription(mode)),
+                    value: mode,
                   ),
-              ],
-            ),
-          );
-        }).toList(),
+                )
+                .toList(),
+          ),
+        ),
       ),
     );
 
@@ -74,19 +95,28 @@ class SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: _sectionTopSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.only(
+              left: _sectionTitleHorizontalPadding,
+              right: _sectionTitleHorizontalPadding,
+              bottom: _sectionTitleBottomSpacing,
+            ),
             child: Text(
               title,
-              style: Theme.of(context).textTheme.titleSmall
+              style: Theme.of(context).textTheme.labelLarge
                   ?.copyWith(color: Theme.of(context).colorScheme.primary),
             ),
           ),
-          ...children,
+          Card(
+            margin: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            elevation: 0,
+            child: Column(children: children),
+          ),
         ],
       ),
     );
@@ -97,6 +127,7 @@ class SettingsItem extends StatelessWidget {
   const SettingsItem({
     required this.icon,
     required this.title,
+    this.description,
     required this.value,
     required this.onTap,
     super.key,
@@ -104,19 +135,62 @@ class SettingsItem extends StatelessWidget {
 
   final IconData icon;
   final String title;
+  final String? description;
   final String value;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(value),
-      trailing: const Icon(Icons.chevron_right),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: _itemHorizontalPadding,
+        vertical: _itemVerticalPadding,
+      ),
+      leading: Container(
+        width: _itemIconSize,
+        height: _itemIconSize,
+        decoration: BoxDecoration(
+          color: colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(_itemIconRadius),
+        ),
+        child: Icon(icon, color: colorScheme.onSecondaryContainer),
+      ),
+      title: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      subtitle: description == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                description!,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+            ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: colorScheme.primary),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
+        ],
+      ),
       onTap: onTap,
     );
   }
+}
+
+String _themeModeDescription(ThemeMode mode) {
+  return switch (mode) {
+    ThemeMode.system => 'Match your device appearance',
+    ThemeMode.light => 'Always use light appearance',
+    ThemeMode.dark => 'Always use dark appearance',
+  };
 }
 
 String _themeModeLabel(ThemeMode mode) {
