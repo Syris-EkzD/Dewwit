@@ -1,30 +1,80 @@
 import 'package:dewwit/models/task.dart';
 import 'package:dewwit/repositories/task_repository.dart';
+import 'package:dewwit/settings/settings_screen.dart';
+import 'package:dewwit/settings/theme_controller.dart';
+import 'package:dewwit/settings/theme_preference_store.dart';
 import 'package:dewwit/services/dewwit_widget_updater.dart';
+import 'package:dewwit/theme/dewwit_theme.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(DewwitApp(taskRepository: TaskRepository()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final preferenceStore = ThemePreferenceStore();
+  final initialThemeMode = await preferenceStore.load();
+
+  runApp(
+    DewwitApp(
+      taskRepository: TaskRepository(),
+      themeController: ThemeController(
+        preferenceStore,
+        initialThemeMode: initialThemeMode,
+      ),
+    ),
+  );
 }
 
-class DewwitApp extends StatelessWidget {
+class DewwitApp extends StatefulWidget {
   const DewwitApp({
     required this.taskRepository,
+    required this.themeController,
     this.widgetRefresh = DewwitWidgetUpdater.refresh,
     super.key,
   });
 
   final TaskRepository taskRepository;
+  final ThemeController themeController;
   final Future<void> Function() widgetRefresh;
+
+  @override
+  State<DewwitApp> createState() => _DewwitAppState();
+}
+
+class _DewwitAppState extends State<DewwitApp> {
+  @override
+  void initState() {
+    super.initState();
+    widget.themeController.addListener(_themeChanged);
+  }
+
+  @override
+  void didUpdateWidget(DewwitApp oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.themeController != widget.themeController) {
+      oldWidget.themeController.removeListener(_themeChanged);
+      widget.themeController.addListener(_themeChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.themeController.removeListener(_themeChanged);
+    super.dispose();
+  }
+
+  void _themeChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Dewwit',
+      theme: DewwitTheme.light,
+      darkTheme: DewwitTheme.dark,
+      themeMode: widget.themeController.themeMode,
       home: DewwitHomePage(
-        taskRepository: taskRepository,
-        widgetRefresh: widgetRefresh,
+        taskRepository: widget.taskRepository,
+        themeController: widget.themeController,
+        widgetRefresh: widget.widgetRefresh,
       ),
     );
   }
@@ -33,11 +83,13 @@ class DewwitApp extends StatelessWidget {
 class DewwitHomePage extends StatefulWidget {
   const DewwitHomePage({
     required this.taskRepository,
+    required this.themeController,
     required this.widgetRefresh,
     super.key,
   });
 
   final TaskRepository taskRepository;
+  final ThemeController themeController;
   final Future<void> Function() widgetRefresh;
 
   @override
@@ -131,7 +183,22 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dewwit')),
+      appBar: AppBar(
+        title: const Text('Dewwit'),
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (context) =>
+                    SettingsScreen(themeController: widget.themeController),
+              ),
+            ),
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+          ),
+        ],
+      ),
       body: _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: _createTask,

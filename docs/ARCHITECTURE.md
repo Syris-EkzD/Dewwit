@@ -2,8 +2,10 @@
 
 ## Architecture Status
 
-This document describes the implemented Dewwit V1 architecture. V1 is
-complete and has been manually validated on a real Android device.
+This document describes the implemented Dewwit architecture. V1 is complete
+and has been manually validated on a real Android device. V1.1 adds Flutter
+application theme and settings foundations without changing task storage or
+the native Android widget.
 
 ---
 
@@ -121,6 +123,21 @@ A lightweight `TaskRepository` separates SQLite persistence from the Flutter
 UI.
 
 Avoid creating multiple architectural layers purely for architectural appearance.
+
+## Application Settings and Theme
+
+Flutter's standard `ThemeData`, `ColorScheme`, and `ThemeMode` APIs provide a
+single theme-aware widget tree for system, light, and dark appearance. Light
+and dark theme definitions are centralized under `lib/theme`.
+
+A small `ThemeController` owns the active theme mode independently of the
+Settings UI. The stable values `system`, `light`, and `dark` are stored with
+`shared_preferences`; missing or invalid values resolve to system mode. These
+preferences are separate from the authoritative SQLite task database.
+
+The Settings screen is composed from simple settings sections and items so
+new application preferences can be added without changing its overall
+structure.
 
 ---
 

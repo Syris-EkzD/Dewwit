@@ -1,6 +1,8 @@
 import 'package:dewwit/main.dart';
 import 'package:dewwit/models/task.dart';
 import 'package:dewwit/repositories/task_repository.dart';
+import 'package:dewwit/settings/theme_controller.dart';
+import 'package:dewwit/settings/theme_preference_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -8,16 +10,19 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 void main() {
   late _FakeTaskRepository repository;
   late int widgetRefreshCount;
+  late _FakeThemePreferenceStore themePreferenceStore;
 
   setUp(() {
     repository = _FakeTaskRepository();
     widgetRefreshCount = 0;
+    themePreferenceStore = _FakeThemePreferenceStore();
   });
 
   Future<void> pumpDewwit(WidgetTester tester) async {
     await tester.pumpWidget(
       DewwitApp(
         taskRepository: repository,
+        themeController: ThemeController(themePreferenceStore),
         widgetRefresh: () async {
           widgetRefreshCount += 1;
         },
@@ -86,6 +91,35 @@ void main() {
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
+
+  testWidgets('changes and persists theme from settings', (
+    WidgetTester tester,
+  ) async {
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('System'), findsOneWidget);
+
+    await tester.tap(find.text('Theme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.themeMode, ThemeMode.dark);
+    expect(themePreferenceStore.savedThemeMode, ThemeMode.dark);
+    expect(find.text('Dark'), findsOneWidget);
+  });
+}
+
+class _FakeThemePreferenceStore extends ThemePreferenceStore {
+  ThemeMode? savedThemeMode;
+
+  @override
+  Future<void> save(ThemeMode themeMode) async {
+    savedThemeMode = themeMode;
+  }
 }
 
 class _FakeTaskRepository extends TaskRepository {

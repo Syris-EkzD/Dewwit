@@ -180,3 +180,12 @@ Dewwit V1 meets the agreed success criteria:
 * [x] App and widget state remain synchronized reliably.
 
 A polished visual design is desirable but is not required for V1 completion.
+
+---
+
+# Version 1.1
+
+V1.1 focuses on UI and UX polish. Its settings foundation lets users choose
+System, Light, or Dark application appearance and preserves that selection
+across launches. The native Android home-screen widget retains its existing
+V1 appearance and behavior.
