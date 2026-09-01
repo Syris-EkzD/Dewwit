@@ -2,27 +2,32 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_task_row"
     android:layout_width="match_parent"
-    android:layout_height="48dp"
+    android:layout_height="wrap_content"
+    android:minHeight="44dp"
+    android:background="@drawable/dewwit_widget_task_background_light"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="4dp">
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="4dp">
 
     <TextView
         android:id="@+id/widget_task_status"
-        android:layout_width="32dp"
+        android:layout_width="30dp"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:textColor="#202124"
-        android:textSize="22sp" />
+        android:textColor="@color/dewwit_widget_light_on_surface_variant"
+        android:textSize="20sp" />
 
     <TextView
         android:id="@+id/widget_task_title"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:layout_weight="1"
         android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="#202124"
+        android:lineSpacingExtra="1dp"
+        android:maxLines="3"
+        android:textColor="@color/dewwit_widget_light_on_surface"
         android:textSize="15sp" />
 
 </LinearLayout>

@@ -60,6 +60,8 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), 'Draft stays');
+    tester.testTextInput.hide();
+    await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
 

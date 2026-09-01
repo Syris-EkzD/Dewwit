@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dewwit/models/task.dart';
 import 'package:dewwit/repositories/task_repository.dart';
 import 'package:dewwit/settings/settings_screen.dart';
@@ -25,6 +27,7 @@ Future<void> main() async {
       ),
     ),
   );
+  unawaited(DewwitWidgetUpdater.syncThemeMode(initialThemeMode));
 }
 
 class DewwitApp extends StatefulWidget {
@@ -256,19 +259,17 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         ],
       ),
       body: SafeArea(child: _buildBody()),
-      floatingActionButton: _isCreatingTask
-        ? null
-        : TextFieldTapRegion(
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: FloatingActionButton(
-                onPressed: _startCreatingTask,
-                tooltip: 'Add task',
-                child: const Icon(Icons.add, size: 32),
-              ),
-            ),
+      floatingActionButton: TextFieldTapRegion(
+        child: SizedBox(
+          width: 72,
+          height: 72,
+          child: FloatingActionButton(
+            onPressed: _startCreatingTask,
+            tooltip: 'Add task',
+            child: const Icon(Icons.add, size: 32),
           ),
+        ),
+      ),
     );
   }
 

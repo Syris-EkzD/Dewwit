@@ -2,6 +2,8 @@ package com.example.mobile_todo
 
 import android.content.Context
 import android.content.Intent
+import android.text.SpannableString
+import android.text.style.StrikethroughSpan
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 
@@ -29,9 +31,30 @@ private class TaskViewsFactory(
 
     override fun getViewAt(position: Int): RemoteViews? {
         val task = tasks.getOrNull(position) ?: return null
+        val palette = DewwitWidgetTheme.resolve(context)
+        val taskTitle = if (task.isCompleted) {
+            SpannableString(task.title).apply {
+                setSpan(StrikethroughSpan(), 0, length, 0)
+            }
+        } else {
+            task.title
+        }
         return RemoteViews(context.packageName, R.layout.dewwit_widget_task).apply {
+            setInt(
+                R.id.widget_task_row,
+                "setBackgroundResource",
+                palette.taskBackgroundDrawable,
+            )
             setTextViewText(R.id.widget_task_status, if (task.isCompleted) "☑" else "☐")
-            setTextViewText(R.id.widget_task_title, task.title)
+            setTextColor(
+                R.id.widget_task_status,
+                if (task.isCompleted) palette.completedCheckbox else palette.checkbox,
+            )
+            setTextViewText(R.id.widget_task_title, taskTitle)
+            setTextColor(
+                R.id.widget_task_title,
+                if (task.isCompleted) palette.completedText else palette.taskText,
+            )
             setOnClickFillInIntent(
                 R.id.widget_task_row,
                 Intent().putExtra(DewwitWidgetProvider.EXTRA_TASK_ID, task.id),

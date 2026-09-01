@@ -22,8 +22,22 @@ class DewwitWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: android.os.Bundle,
+    ) {
+        updateWidget(context, appWidgetManager, appWidgetId)
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widget_task_list)
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
+        if (intent.action == Intent.ACTION_CONFIGURATION_CHANGED) {
+            refreshWidgets(context)
+            return
+        }
         if (intent.action != ACTION_TOGGLE_TASK) return
 
         val taskId = intent.getLongExtra(EXTRA_TASK_ID, -1L)
@@ -75,16 +89,26 @@ class DewwitWidgetProvider : AppWidgetProvider() {
                     0
                 }
             val openAppIntent = Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            val palette = DewwitWidgetTheme.resolve(context)
 
             val views = RemoteViews(context.packageName, R.layout.dewwit_widget).apply {
+                setInt(R.id.widget_root, "setBackgroundResource", palette.backgroundDrawable)
                 setRemoteAdapter(R.id.widget_task_list, serviceIntent)
                 setEmptyView(R.id.widget_task_list, R.id.widget_empty_view)
+                setTextColor(R.id.widget_empty_view, palette.secondaryText)
                 setPendingIntentTemplate(
                     R.id.widget_task_list,
                     PendingIntent.getBroadcast(context, appWidgetId, toggleIntent, toggleFlags),
                 )
+                setInt(
+                    R.id.widget_open_app,
+                    "setBackgroundResource",
+                    palette.actionBackgroundDrawable,
+                )
+                setInt(R.id.widget_open_app, "setColorFilter", palette.actionIcon)
                 setOnClickPendingIntent(
-                    R.id.widget_title,
+                    R.id.widget_open_app,
                     PendingIntent.getActivity(
                         context,
                         appWidgetId,

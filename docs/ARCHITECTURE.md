@@ -139,6 +139,14 @@ The Settings screen is composed from simple settings sections and items so
 new application preferences can be added without changing its overall
 structure.
 
+The native Android widget cannot read Flutter's `ThemeData`. After the app
+loads or changes its selected theme, a platform channel explicitly mirrors
+only the stable `system`, `light`, or `dark` value into a widget-owned native
+preference and refreshes installed widgets. This avoids depending on the
+internal storage format of the Flutter `shared_preferences` plugin. Flutter's
+theme selection remains the user-facing source of truth, and task data remains
+exclusively in the shared SQLite database.
+
 ---
 
 # Persistence

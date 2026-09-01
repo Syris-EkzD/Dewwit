@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="dewwit_launcher_background">#426A5A</color>
+    <color name="dewwit_widget_light_background">#FFFBFE</color>
+    <color name="dewwit_widget_light_surface">#F0F4F1</color>
+    <color name="dewwit_widget_light_primary">#426A5A</color>
+    <color name="dewwit_widget_light_primary_container">#C4EBD5</color>
+    <color name="dewwit_widget_light_on_primary_container">#17372B</color>
+    <color name="dewwit_widget_light_on_surface">#1A1C1B</color>
+    <color name="dewwit_widget_light_on_surface_variant">#414944</color>
+    <color name="dewwit_widget_light_completed">#727A75</color>
+    <color name="dewwit_widget_dark_background">#111411</color>
+    <color name="dewwit_widget_dark_surface">#1B211E</color>
+    <color name="dewwit_widget_dark_primary">#A9D1BE</color>
+    <color name="dewwit_widget_dark_primary_container">#294E40</color>
+    <color name="dewwit_widget_dark_on_primary_container">#C4EBD5</color>
+    <color name="dewwit_widget_dark_on_surface">#E1E3E0</color>
+    <color name="dewwit_widget_dark_on_surface_variant">#C0C9C3</color>
+    <color name="dewwit_widget_dark_completed">#89918C</color>
 </resources>

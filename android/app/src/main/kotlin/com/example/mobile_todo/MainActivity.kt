@@ -9,11 +9,17 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL)
             .setMethodCallHandler { call, result ->
-                if (call.method == "refresh") {
-                    DewwitWidgetProvider.refreshWidgets(this)
-                    result.success(null)
-                } else {
-                    result.notImplemented()
+                when (call.method) {
+                    "refresh" -> {
+                        DewwitWidgetProvider.refreshWidgets(this)
+                        result.success(null)
+                    }
+                    "syncThemeMode" -> {
+                        DewwitWidgetThemePreferences.setThemeMode(this, call.arguments as? String)
+                        DewwitWidgetProvider.refreshWidgets(this)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
                 }
             }
     }
