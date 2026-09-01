@@ -3,6 +3,7 @@ import 'package:dewwit/models/task.dart';
 import 'package:dewwit/repositories/task_repository.dart';
 import 'package:dewwit/settings/theme_controller.dart';
 import 'package:dewwit/settings/theme_preference_store.dart';
+import 'package:dewwit/widgets/editable_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -41,7 +42,7 @@ void main() {
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
   });
 
-  testWidgets('creates a task and refreshes the checklist', (
+  testWidgets('opens one focused inline draft without a dialog', (
     WidgetTester tester,
   ) async {
     await pumpDewwit(tester);
@@ -49,14 +50,81 @@ void main() {
 
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Finish activity');
+
+    expect(find.byType(EditableTaskItem), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('No tasks yet'), findsNothing);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+      isTrue,
+    );
+
+    await tester.enterText(find.byType(TextField), 'Draft stays');
+    await tester.tap(find.byTooltip('Add task'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditableTaskItem), findsOneWidget);
+    expect(find.text('Draft stays'), findsOneWidget);
+    expect(await repository.getTasks(), isEmpty);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
+      isTrue,
+    );
+  });
+
+  testWidgets('submits a valid inline draft and refreshes the checklist', (
+    WidgetTester tester,
+  ) async {
+    await pumpDewwit(tester);
+    await tester.tap(find.byTooltip('Add task'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '  Finish activity  ');
     await tester.pump();
-    await tester.tap(find.text('Add'));
+    await tester.tap(find.byTooltip('Save task'));
     await tester.pumpAndSettle();
 
     expect(find.text('Finish activity'), findsOneWidget);
+    expect(find.byType(EditableTaskItem), findsNothing);
     expect((await repository.getTasks()).single.title, 'Finish activity');
     expect(widgetRefreshCount, 1);
+  });
+
+  testWidgets('multiline draft grows to keep its text visible', (
+    WidgetTester tester,
+  ) async {
+    await pumpDewwit(tester);
+    await tester.tap(find.byTooltip('Add task'));
+    await tester.pumpAndSettle();
+
+    final input = find.byKey(const ValueKey('task-draft-input'));
+    final initialHeight = tester.getSize(input).height;
+    final textField = tester.widget<TextField>(input);
+    expect(textField.minLines, 1);
+    expect(textField.maxLines, isNull);
+
+    await tester.enterText(
+      input,
+      'First part of a long task\nSecond part\nThird part',
+    );
+    await tester.pump();
+
+    expect(tester.getSize(input).height, greaterThan(initialHeight));
+  });
+
+  testWidgets('discards an empty inline draft without persistence', (
+    WidgetTester tester,
+  ) async {
+    await pumpDewwit(tester);
+    await tester.tap(find.byTooltip('Add task'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Discard draft'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditableTaskItem), findsNothing);
+    expect(find.text('No tasks yet'), findsOneWidget);
+    expect(await repository.getTasks(), isEmpty);
+    expect(widgetRefreshCount, 0);
   });
 
   testWidgets('toggles and deletes a task', (WidgetTester tester) async {

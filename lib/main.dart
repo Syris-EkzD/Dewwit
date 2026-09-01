@@ -7,6 +7,7 @@ import 'package:dewwit/services/dewwit_widget_updater.dart';
 import 'package:dewwit/theme/dewwit_design.dart';
 import 'package:dewwit/theme/dewwit_theme.dart';
 import 'package:dewwit/widgets/dewwit_task_item.dart';
+import 'package:dewwit/widgets/editable_task_item.dart';
 import 'package:dewwit/widgets/empty_task_state.dart';
 import 'package:flutter/material.dart';
 
@@ -104,17 +105,25 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   List<Task> _tasks = const [];
   bool _isLoading = true;
   bool _hasLoadError = false;
+  bool _isCreatingTask = false;
+  bool _isFinishingDraft = false;
+  final _draftController = TextEditingController();
+  final _draftFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _draftFocusNode.addListener(_handleDraftFocusChange);
     _loadTasks();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _draftFocusNode.removeListener(_handleDraftFocusChange);
+    _draftController.dispose();
+    _draftFocusNode.dispose();
     super.dispose();
   }
 
@@ -145,16 +154,41 @@ class _DewwitHomePageState extends State<DewwitHomePage>
     }
   }
 
-  Future<void> _createTask() async {
-    final title = await showDialog<String>(
-      context: context,
-      builder: (context) => const _CreateTaskDialog(),
-    );
+  void _startCreatingTask() {
+    if (_isCreatingTask) {
+      _draftFocusNode.requestFocus();
+      return;
+    }
 
-    if (title == null) return;
-    await _runMutation(() async {
-      await widget.taskRepository.createTask(title);
+    setState(() => _isCreatingTask = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isCreatingTask) {
+        _draftFocusNode.requestFocus();
+      }
     });
+  }
+
+  void _handleDraftFocusChange() {
+    if (!_draftFocusNode.hasFocus && _isCreatingTask) {
+      _finishDraft();
+    }
+  }
+
+  Future<void> _finishDraft() async {
+    if (!_isCreatingTask || _isFinishingDraft) return;
+
+    final title = _draftController.text.trim();
+    _isFinishingDraft = true;
+    setState(() => _isCreatingTask = false);
+    _draftController.clear();
+
+    if (title.isNotEmpty) {
+      await _runMutation(() async {
+        await widget.taskRepository.createTask(title);
+      });
+    }
+
+    _isFinishingDraft = false;
   }
 
   Future<void> _toggleTask(Task task) async {
@@ -222,15 +256,19 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         ],
       ),
       body: SafeArea(child: _buildBody()),
-      floatingActionButton: SizedBox(
-        width: 72,
-        height: 72,
-        child: FloatingActionButton(
-          onPressed: _createTask,
-          tooltip: 'Add task',
-          child: const Icon(Icons.add, size: 32),
-        ),
-      ),
+      floatingActionButton: _isCreatingTask
+        ? null
+        : TextFieldTapRegion(
+            child: SizedBox(
+              width: 72,
+              height: 72,
+              child: FloatingActionButton(
+                onPressed: _startCreatingTask,
+                tooltip: 'Add task',
+                child: const Icon(Icons.add, size: 32),
+              ),
+            ),
+          ),
     );
   }
 
@@ -249,7 +287,7 @@ class _DewwitHomePageState extends State<DewwitHomePage>
       );
     }
 
-    if (_tasks.isEmpty) {
+    if (_tasks.isEmpty && !_isCreatingTask) {
       return const EmptyTaskState();
     }
 
@@ -260,10 +298,19 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         DewwitSpacing.medium,
         104,
       ),
-      itemCount: _tasks.length,
+      itemCount: _tasks.length + (_isCreatingTask ? 1 : 0),
       separatorBuilder: (context, index) =>
           const SizedBox(height: DewwitSpacing.small),
       itemBuilder: (context, index) {
+        if (index == _tasks.length) {
+          return EditableTaskItem(
+            key: const ValueKey('task-draft-row'),
+            controller: _draftController,
+            focusNode: _draftFocusNode,
+            onFinish: _finishDraft,
+          );
+        }
+
         final task = _tasks[index];
         return DewwitTaskItem(
           key: ValueKey(task.id),
@@ -272,57 +319,6 @@ class _DewwitHomePageState extends State<DewwitHomePage>
           onDelete: () => _deleteTask(task),
         );
       },
-    );
-  }
-}
-
-class _CreateTaskDialog extends StatefulWidget {
-  const _CreateTaskDialog();
-
-  @override
-  State<_CreateTaskDialog> createState() => _CreateTaskDialogState();
-}
-
-class _CreateTaskDialogState extends State<_CreateTaskDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final title = _controller.text.trim();
-
-    return AlertDialog(
-      icon: const Icon(Icons.add_task_rounded),
-      title: const Text('Add a task'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.sentences,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          hintText: 'What needs doing?',
-          labelText: 'Task title',
-        ),
-        onChanged: (_) => setState(() {}),
-        onSubmitted: title.isEmpty
-            ? null
-            : (_) => Navigator.pop(context, title),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: title.isEmpty ? null : () => Navigator.pop(context, title),
-          child: const Text('Add'),
-        ),
-      ],
     );
   }
 }

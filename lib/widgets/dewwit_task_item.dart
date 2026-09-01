@@ -36,6 +36,8 @@ class DewwitTaskItem extends StatelessWidget {
         ),
         title: Text(
           task.title,
+          softWrap: true,
+          maxLines: null,
           style: textTheme.bodyLarge?.copyWith(
             color: task.isCompleted
                 ? colorScheme.onSurfaceVariant
