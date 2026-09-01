@@ -45,7 +45,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpDewwit(tester);
-    expect(find.text('No tasks yet.'), findsOneWidget);
+    expect(find.text('No tasks yet'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
@@ -73,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Review networking'), findsNothing);
-    expect(find.text('No tasks yet.'), findsOneWidget);
+    expect(find.text('No tasks yet'), findsOneWidget);
     expect(await repository.getTasks(), isEmpty);
     expect(widgetRefreshCount, 2);
   });

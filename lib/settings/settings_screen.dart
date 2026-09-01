@@ -1,16 +1,9 @@
 import 'package:dewwit/settings/theme_controller.dart';
+import 'package:dewwit/theme/dewwit_design.dart';
 import 'package:flutter/material.dart';
 
-const _screenHorizontalPadding = 16.0;
-const _screenTopPadding = 8.0;
-const _screenBottomPadding = 24.0;
-const _sectionTopSpacing = 16.0;
-const _sectionTitleHorizontalPadding = 4.0;
-const _sectionTitleBottomSpacing = 8.0;
-const _itemHorizontalPadding = 16.0;
 const _itemVerticalPadding = 14.0;
 const _itemIconSize = 40.0;
-const _itemIconRadius = 12.0;
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({required this.themeController, super.key});
@@ -24,10 +17,10 @@ class SettingsScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-            _screenHorizontalPadding,
-            _screenTopPadding,
-            _screenHorizontalPadding,
-            _screenBottomPadding,
+            DewwitSpacing.medium,
+            DewwitSpacing.small,
+            DewwitSpacing.medium,
+            DewwitSpacing.large,
           ),
           children: [
             SettingsSection(
@@ -95,15 +88,15 @@ class SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: _sectionTopSpacing),
+      padding: const EdgeInsets.only(top: DewwitSpacing.medium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(
-              left: _sectionTitleHorizontalPadding,
-              right: _sectionTitleHorizontalPadding,
-              bottom: _sectionTitleBottomSpacing,
+              left: DewwitSpacing.xSmall,
+              right: DewwitSpacing.xSmall,
+              bottom: DewwitSpacing.small,
             ),
             child: Text(
               title,
@@ -145,7 +138,7 @@ class SettingsItem extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: _itemHorizontalPadding,
+        horizontal: DewwitSpacing.medium,
         vertical: _itemVerticalPadding,
       ),
       leading: Container(
@@ -153,7 +146,7 @@ class SettingsItem extends StatelessWidget {
         height: _itemIconSize,
         decoration: BoxDecoration(
           color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(_itemIconRadius),
+          borderRadius: BorderRadius.circular(DewwitRadii.small),
         ),
         child: Icon(icon, color: colorScheme.onSecondaryContainer),
       ),
@@ -161,7 +154,7 @@ class SettingsItem extends StatelessWidget {
       subtitle: description == null
           ? null
           : Padding(
-              padding: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.only(top: DewwitSpacing.xSmall),
               child: Text(
                 description!,
                 style: Theme.of(context).textTheme.bodyMedium
@@ -176,7 +169,7 @@ class SettingsItem extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: colorScheme.primary),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: DewwitSpacing.xSmall),
           Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
         ],
       ),

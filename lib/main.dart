@@ -4,7 +4,10 @@ import 'package:dewwit/settings/settings_screen.dart';
 import 'package:dewwit/settings/theme_controller.dart';
 import 'package:dewwit/settings/theme_preference_store.dart';
 import 'package:dewwit/services/dewwit_widget_updater.dart';
+import 'package:dewwit/theme/dewwit_design.dart';
 import 'package:dewwit/theme/dewwit_theme.dart';
+import 'package:dewwit/widgets/dewwit_task_item.dart';
+import 'package:dewwit/widgets/empty_task_state.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
@@ -184,26 +187,49 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dewwit'),
-        actions: [
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (context) =>
-                    SettingsScreen(themeController: widget.themeController),
+        toolbarHeight: 80,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dewwit',
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+            ),
+            Text(
+              'Your checklist',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined),
+          ],
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: DewwitSpacing.small),
+            child: IconButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) =>
+                      SettingsScreen(themeController: widget.themeController),
+                ),
+              ),
+              tooltip: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+            ),
           ),
         ],
       ),
-      body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createTask,
-        tooltip: 'Add task',
-        child: const Icon(Icons.add),
+      body: SafeArea(child: _buildBody()),
+      floatingActionButton: SizedBox(
+        width: 72,
+        height: 72,
+        child: FloatingActionButton(
+          onPressed: _createTask,
+          tooltip: 'Add task',
+          child: const Icon(Icons.add, size: 32),
+        ),
       ),
     );
   }
@@ -215,38 +241,35 @@ class _DewwitHomePageState extends State<DewwitHomePage>
 
     if (_hasLoadError) {
       return Center(
-        child: TextButton(
+        child: FilledButton.tonalIcon(
           onPressed: _loadTasks,
-          child: const Text('Could not load tasks. Tap to retry.'),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Could not load tasks. Try again'),
         ),
       );
     }
 
     if (_tasks.isEmpty) {
-      return const Center(child: Text('No tasks yet.'));
+      return const EmptyTaskState();
     }
 
-    return ListView.builder(
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        DewwitSpacing.medium,
+        DewwitSpacing.small,
+        DewwitSpacing.medium,
+        104,
+      ),
       itemCount: _tasks.length,
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: DewwitSpacing.small),
       itemBuilder: (context, index) {
         final task = _tasks[index];
-        return ListTile(
+        return DewwitTaskItem(
           key: ValueKey(task.id),
-          leading: Checkbox(
-            value: task.isCompleted,
-            onChanged: (_) => _toggleTask(task),
-          ),
-          title: Text(
-            task.title,
-            style: task.isCompleted
-                ? const TextStyle(decoration: TextDecoration.lineThrough)
-                : null,
-          ),
-          trailing: IconButton(
-            onPressed: () => _deleteTask(task),
-            tooltip: 'Delete ${task.title}',
-            icon: const Icon(Icons.delete_outline),
-          ),
+          task: task,
+          onToggle: () => _toggleTask(task),
+          onDelete: () => _deleteTask(task),
         );
       },
     );
@@ -274,19 +297,28 @@ class _CreateTaskDialogState extends State<_CreateTaskDialog> {
     final title = _controller.text.trim();
 
     return AlertDialog(
-      title: const Text('New task'),
+      icon: const Icon(Icons.add_task_rounded),
+      title: const Text('Add a task'),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(labelText: 'Task title'),
+        textCapitalization: TextCapitalization.sentences,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          hintText: 'What needs doing?',
+          labelText: 'Task title',
+        ),
         onChanged: (_) => setState(() {}),
+        onSubmitted: title.isEmpty
+            ? null
+            : (_) => Navigator.pop(context, title),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        TextButton(
+        FilledButton(
           onPressed: title.isEmpty ? null : () => Navigator.pop(context, title),
           child: const Text('Add'),
         ),
