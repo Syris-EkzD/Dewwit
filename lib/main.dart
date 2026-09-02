@@ -259,17 +259,19 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         ],
       ),
       body: SafeArea(child: _buildBody()),
-      floatingActionButton: TextFieldTapRegion(
-        child: SizedBox(
-          width: 72,
-          height: 72,
-          child: FloatingActionButton(
-            onPressed: _startCreatingTask,
-            tooltip: 'Add task',
-            child: const Icon(Icons.add, size: 32),
-          ),
-        ),
-      ),
+      floatingActionButton: _isCreatingTask
+          ? null
+          : TextFieldTapRegion(
+              child: SizedBox(
+                width: 72,
+                height: 72,
+                child: FloatingActionButton(
+                  onPressed: _startCreatingTask,
+                  tooltip: 'Add task',
+                  child: const Icon(Icons.add, size: 32),
+                ),
+              ),
+            ),
     );
   }
 
