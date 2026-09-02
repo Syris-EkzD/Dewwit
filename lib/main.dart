@@ -209,6 +209,7 @@ class _DewwitHomePageState extends State<DewwitHomePage>
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
+        persist: false,
         content: Text(
           willComplete ? 'Task completed' : 'Task marked incomplete',
         ),
@@ -231,8 +232,31 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   }
 
   Future<void> _deleteTask(Task task) async {
+    final succeeded = await _runMutation(() async {
+      final deleted = await widget.taskRepository.deleteTask(task.id);
+      if (!deleted) {
+        throw StateError('Task ${task.id} no longer exists.');
+      }
+    });
+    if (!succeeded || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        persist: false,
+        content: const Text('Task deleted'),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () => unawaited(_restoreDeletedTask(task)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _restoreDeletedTask(Task task) async {
     await _runMutation(() async {
-      await widget.taskRepository.deleteTask(task.id);
+      await widget.taskRepository.restoreTask(task);
     });
   }
 

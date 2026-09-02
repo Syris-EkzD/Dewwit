@@ -94,6 +94,27 @@ void main() {
     expect(await repository.getTasks(), isEmpty);
   });
 
+  test('restores a deleted task with its original persisted values', () async {
+    final created = await repository.createTask('Restore exact task');
+    final completedAt = DateTime.utc(2026, 9, 3, 8, 15);
+    final completed = await repository.setTaskCompletion(
+      created.id,
+      isCompleted: true,
+      completedAt: completedAt,
+    );
+
+    await repository.deleteTask(created.id);
+    final restored = await repository.restoreTask(completed!);
+    final persisted = (await repository.getTasks()).single;
+
+    expect(restored.id, created.id);
+    expect(persisted.id, created.id);
+    expect(persisted.title, created.title);
+    expect(persisted.isCompleted, isTrue);
+    expect(persisted.createdAt, created.createdAt);
+    expect(persisted.completedAt, completedAt);
+  });
+
   test('keeps tasks after reopening the database', () async {
     final temporaryDirectory = await Directory.systemTemp.createTemp(
       'dewwit_test_',

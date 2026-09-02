@@ -146,6 +146,90 @@ void main() {
     expect(widgetRefreshCount, 2);
   });
 
+  testWidgets('undoes deletion of an active task with its original identity', (
+    WidgetTester tester,
+  ) async {
+    final original = await repository.createTask('Restore active');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Task deleted'), findsOneWidget);
+    expect(find.text('UNDO'), findsOneWidget);
+    expect(find.text('Restore active'), findsNothing);
+    expect(await repository.getTasks(), isEmpty);
+
+    await tester.tap(find.text('UNDO'));
+    await tester.pumpAndSettle();
+
+    final restored = (await repository.getTasks()).single;
+    expect(restored.id, original.id);
+    expect(restored.createdAt, original.createdAt);
+    expect(restored.isCompleted, isFalse);
+    expect(restored.completedAt, isNull);
+    expect(find.text('Restore active'), findsOneWidget);
+    expect(find.text('Completed'), findsNothing);
+    expect(widgetRefreshCount, 2);
+  });
+
+  testWidgets('restores a completed deletion in its original ordering', (
+    WidgetTester tester,
+  ) async {
+    final older = await repository.createTask('Older completed');
+    final newest = await repository.createTask('Newest completed');
+    final olderCompletedAt = DateTime.utc(2026, 9, 3, 8);
+    final newestCompletedAt = DateTime.utc(2026, 9, 3, 9);
+    await repository.setTaskCompletion(
+      older.id,
+      isCompleted: true,
+      completedAt: olderCompletedAt,
+    );
+    final original = await repository.setTaskCompletion(
+      newest.id,
+      isCompleted: true,
+      completedAt: newestCompletedAt,
+    );
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byTooltip('Delete Newest completed'));
+    await tester.pumpAndSettle();
+    expect(find.text('Newest completed'), findsNothing);
+
+    await tester.tap(find.text('UNDO'));
+    await tester.pumpAndSettle();
+
+    final tasks = await repository.getTasks();
+    final restored = tasks.first;
+    expect(restored.id, original!.id);
+    expect(restored.createdAt, original.createdAt);
+    expect(restored.completedAt, newestCompletedAt);
+    expect(restored.isCompleted, isTrue);
+    expect(find.text('Completed'), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.text('Newest completed')).dy,
+      lessThan(tester.getTopLeft(find.text('Older completed')).dy),
+    );
+    expect(widgetRefreshCount, 2);
+  });
+
+  testWidgets('leaves a task deleted after the Undo Snackbar expires', (
+    WidgetTester tester,
+  ) async {
+    await repository.createTask('Delete permanently');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    expect(find.text('UNDO'), findsNothing);
+    expect(find.text('Delete permanently'), findsNothing);
+    expect(await repository.getTasks(), isEmpty);
+    expect(widgetRefreshCount, 1);
+  });
+
   testWidgets('undoes completion and returns the task to active', (
     WidgetTester tester,
   ) async {
@@ -348,5 +432,11 @@ class _FakeTaskRepository extends TaskRepository {
     final originalLength = _tasks.length;
     _tasks.removeWhere((task) => task.id == id);
     return _tasks.length != originalLength;
+  }
+
+  @override
+  Future<Task> restoreTask(Task task) async {
+    _tasks.add(task);
+    return task;
   }
 }

@@ -133,6 +133,18 @@ class TaskRepository {
     return deletedRows > 0;
   }
 
+  Future<Task> restoreTask(Task task) async {
+    final database = await _getDatabase();
+    await database.insert(_tasksTable, {
+      'id': task.id,
+      'title': task.title,
+      'is_completed': task.isCompleted ? 1 : 0,
+      'created_at': task.createdAt.millisecondsSinceEpoch,
+      'completed_at': task.completedAt?.millisecondsSinceEpoch,
+    });
+    return task;
+  }
+
   Future<void> close() async {
     final database = _database;
     if (database != null) {
