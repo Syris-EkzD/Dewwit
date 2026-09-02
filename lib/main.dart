@@ -195,8 +195,38 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   }
 
   Future<void> _toggleTask(Task task) async {
+    final willComplete = !task.isCompleted;
+    final succeeded = await _runMutation(() async {
+      await widget.taskRepository.setTaskCompletion(
+        task.id,
+        isCompleted: willComplete,
+        completedAt: willComplete ? DateTime.now().toUtc() : null,
+      );
+    });
+    if (!succeeded || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          willComplete ? 'Task completed' : 'Task marked incomplete',
+        ),
+        action: SnackBarAction(
+          label: 'UNDO',
+          onPressed: () => unawaited(_restoreTaskCompletion(task)),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _restoreTaskCompletion(Task previousTask) async {
     await _runMutation(() async {
-      await widget.taskRepository.toggleTask(task.id);
+      await widget.taskRepository.setTaskCompletion(
+        previousTask.id,
+        isCompleted: previousTask.isCompleted,
+        completedAt: previousTask.completedAt,
+      );
     });
   }
 
@@ -206,17 +236,19 @@ class _DewwitHomePageState extends State<DewwitHomePage>
     });
   }
 
-  Future<void> _runMutation(Future<void> Function() mutation) async {
+  Future<bool> _runMutation(Future<void> Function() mutation) async {
     try {
       await mutation();
       await widget.widgetRefresh();
       await _loadTasks();
+      return true;
     } on Object {
-      if (!mounted) return;
+      if (!mounted) return false;
 
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Could not update tasks.')));
+      return false;
     }
   }
 

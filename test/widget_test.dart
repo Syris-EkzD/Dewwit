@@ -146,6 +146,57 @@ void main() {
     expect(widgetRefreshCount, 2);
   });
 
+  testWidgets('undoes completion and returns the task to active', (
+    WidgetTester tester,
+  ) async {
+    await repository.createTask('Accidental completion');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Task completed'), findsOneWidget);
+    expect(find.text('UNDO'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
+    expect((await repository.getTasks()).single.completedAt, isNotNull);
+
+    await tester.tap(find.text('UNDO'));
+    await tester.pumpAndSettle();
+
+    final restored = (await repository.getTasks()).single;
+    expect(restored.isCompleted, isFalse);
+    expect(restored.completedAt, isNull);
+    expect(find.text('Completed'), findsNothing);
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
+    expect(widgetRefreshCount, 2);
+  });
+
+  testWidgets('undoes uncompletion with the original completion timestamp', (
+    WidgetTester tester,
+  ) async {
+    final task = await repository.createTask('Restore completion');
+    final completed = await repository.toggleTask(task.id);
+    final originalCompletedAt = completed!.completedAt;
+    await pumpDewwit(tester);
+
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Task marked incomplete'), findsOneWidget);
+    expect(find.text('UNDO'), findsOneWidget);
+    expect(find.text('Completed'), findsNothing);
+
+    await tester.tap(find.text('UNDO'));
+    await tester.pumpAndSettle();
+
+    final restored = (await repository.getTasks()).single;
+    expect(restored.isCompleted, isTrue);
+    expect(restored.completedAt, originalCompletedAt);
+    expect(find.text('Completed'), findsOneWidget);
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    expect(widgetRefreshCount, 2);
+  });
+
   testWidgets('reloads tasks when the app resumes', (
     WidgetTester tester,
   ) async {
@@ -266,6 +317,27 @@ class _FakeTaskRepository extends TaskRepository {
       isCompleted: !current.isCompleted,
       createdAt: current.createdAt,
       completedAt: current.isCompleted ? null : DateTime.now().toUtc(),
+    );
+    _tasks[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<Task?> setTaskCompletion(
+    int id, {
+    required bool isCompleted,
+    required DateTime? completedAt,
+  }) async {
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index == -1) return null;
+
+    final current = _tasks[index];
+    final updated = Task(
+      id: current.id,
+      title: current.title,
+      isCompleted: isCompleted,
+      createdAt: current.createdAt,
+      completedAt: isCompleted ? completedAt : null,
     );
     _tasks[index] = updated;
     return updated;

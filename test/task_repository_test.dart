@@ -59,6 +59,33 @@ void main() {
     expect(await repository.toggleTask(999), isNull);
   });
 
+  test('restores an explicit completion state and timestamp', () async {
+    final task = await repository.createTask('Undo state');
+    final originalCompletedAt = DateTime.utc(2026, 9, 2, 10, 30);
+
+    final completed = await repository.setTaskCompletion(
+      task.id,
+      isCompleted: true,
+      completedAt: originalCompletedAt,
+    );
+    final incomplete = await repository.setTaskCompletion(
+      task.id,
+      isCompleted: false,
+      completedAt: null,
+    );
+    final restored = await repository.setTaskCompletion(
+      task.id,
+      isCompleted: true,
+      completedAt: originalCompletedAt,
+    );
+
+    expect(completed?.completedAt, originalCompletedAt);
+    expect(incomplete?.isCompleted, isFalse);
+    expect(incomplete?.completedAt, isNull);
+    expect(restored?.isCompleted, isTrue);
+    expect(restored?.completedAt, originalCompletedAt);
+  });
+
   test('deletes a task', () async {
     final task = await repository.createTask('Finish activity');
 

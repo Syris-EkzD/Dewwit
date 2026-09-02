@@ -87,6 +87,42 @@ class TaskRepository {
     });
   }
 
+  Future<Task?> setTaskCompletion(
+    int id, {
+    required bool isCompleted,
+    required DateTime? completedAt,
+  }) async {
+    if (isCompleted && completedAt == null) {
+      throw ArgumentError.notNull('completedAt');
+    }
+
+    final database = await _getDatabase();
+    return database.transaction((transaction) async {
+      final updatedRows = await transaction.update(
+        _tasksTable,
+        {
+          'is_completed': isCompleted ? 1 : 0,
+          'completed_at': isCompleted
+              ? completedAt!.millisecondsSinceEpoch
+              : null,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (updatedRows == 0) {
+        return null;
+      }
+
+      final rows = await transaction.query(
+        _tasksTable,
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      return Task.fromMap(rows.single);
+    });
+  }
+
   Future<bool> deleteTask(int id) async {
     final database = await _getDatabase();
     final deletedRows = await database.delete(
