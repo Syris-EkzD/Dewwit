@@ -60,6 +60,32 @@ class TaskRepository {
     return rows.map(Task.fromMap).toList(growable: false);
   }
 
+  Future<Task?> updateTaskTitle(int id, String title) async {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
+    }
+
+    final database = await _getDatabase();
+    final updatedRows = await database.update(
+      _tasksTable,
+      {'title': normalizedTitle},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (updatedRows == 0) {
+      return null;
+    }
+
+    final rows = await database.query(
+      _tasksTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return Task.fromMap(rows.single);
+  }
+
   Future<Task?> toggleTask(int id) async {
     final database = await _getDatabase();
 

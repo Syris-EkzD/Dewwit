@@ -189,3 +189,12 @@ V1.1 focuses on UI and UX polish. Its settings foundation lets users choose
 System, Light, or Dark application appearance and preserves that selection
 across launches. The native Android home-screen widget retains its existing
 V1 appearance and behavior.
+
+---
+
+# Version 1.2
+
+V1.2 extends core task management. Existing active and completed task titles
+can be edited inline while preserving task identity, timestamps, completion
+state, and checklist ordering. Title changes are persisted to the shared task
+database and reflected in the Android home-screen widget.

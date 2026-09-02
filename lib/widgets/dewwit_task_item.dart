@@ -7,12 +7,14 @@ class DewwitTaskItem extends StatelessWidget {
     required this.task,
     required this.onToggle,
     required this.onDelete,
+    required this.onEdit,
     super.key,
   });
 
   final Task task;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -24,28 +26,35 @@ class DewwitTaskItem extends StatelessWidget {
       borderRadius: BorderRadius.circular(DewwitRadii.medium),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-        contentPadding: const EdgeInsets.only(
-          left: DewwitSpacing.small,
-          right: DewwitSpacing.small,
-          top: DewwitSpacing.xSmall,
-          bottom: DewwitSpacing.xSmall,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        horizontalTitleGap: 8,
+        minLeadingWidth: 24,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: DewwitSpacing.xSmall,
         ),
         leading: Checkbox(
           value: task.isCompleted,
           onChanged: (_) => onToggle(),
         ),
-        title: Text(
-          task.title,
-          softWrap: true,
-          maxLines: null,
-          style: textTheme.bodyLarge?.copyWith(
-            color: task.isCompleted
-                ? colorScheme.onSurfaceVariant
-                : colorScheme.onSurface,
-            decoration: task.isCompleted
-                ? TextDecoration.lineThrough
-                : TextDecoration.none,
-            decorationColor: colorScheme.onSurfaceVariant,
+        title: InkWell(
+          onTap: onEdit,
+          child: Padding(
+            padding: EdgeInsets.zero,
+            child: Text(
+              task.title,
+              softWrap: true,
+              maxLines: null,
+              style: textTheme.bodyLarge?.copyWith(
+                color: task.isCompleted
+                    ? colorScheme.onSurfaceVariant
+                    : colorScheme.onSurface,
+                decoration: task.isCompleted
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
+                decorationColor: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         ),
         trailing: IconButton(

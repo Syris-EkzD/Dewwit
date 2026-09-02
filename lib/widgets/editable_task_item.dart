@@ -47,15 +47,16 @@ class _EditableTaskItemState extends State<EditableTaskItem> {
     final hasTitle = widget.controller.text.trim().isNotEmpty;
 
     return Material(
-      color: colorScheme.primaryContainer.withValues(alpha: 0.35),
+      color: colorScheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(DewwitRadii.medium),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
-        contentPadding: const EdgeInsets.only(
-          left: DewwitSpacing.small,
-          right: DewwitSpacing.small,
-          top: DewwitSpacing.xSmall,
-          bottom: DewwitSpacing.xSmall,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        horizontalTitleGap: DewwitSpacing.small,
+        minLeadingWidth: DewwitSpacing.large,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: DewwitSpacing.xSmall,
         ),
         leading: const Checkbox(value: false, onChanged: null),
         title: TextField(

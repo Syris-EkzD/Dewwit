@@ -4,6 +4,7 @@ import 'package:dewwit/repositories/task_repository.dart';
 import 'package:dewwit/settings/theme_controller.dart';
 import 'package:dewwit/settings/theme_preference_store.dart';
 import 'package:dewwit/widgets/editable_task_item.dart';
+import 'package:dewwit/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -144,6 +145,135 @@ void main() {
     expect(find.text('No tasks yet'), findsOneWidget);
     expect(await repository.getTasks(), isEmpty);
     expect(widgetRefreshCount, 2);
+  });
+
+  testWidgets('edits an active task inline and preserves its state', (
+    WidgetTester tester,
+  ) async {
+    final original = await repository.createTask('Original title');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.text('Original title'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditingTaskItem), findsOneWidget);
+    final input = find.byKey(ValueKey('task-edit-input-${original.id}'));
+    expect(tester.widget<TextField>(input).controller?.text, 'Original title');
+    expect(tester.widget<TextField>(input).focusNode?.hasFocus, isTrue);
+
+    await tester.enterText(input, '  Updated title  ');
+    await tester.tap(find.byTooltip('Save changes'));
+    await tester.pumpAndSettle();
+
+    final updated = (await repository.getTasks()).single;
+    expect(updated.title, 'Updated title');
+    expect(updated.id, original.id);
+    expect(updated.createdAt, original.createdAt);
+    expect(updated.isCompleted, original.isCompleted);
+    expect(updated.completedAt, original.completedAt);
+    expect(find.byType(EditingTaskItem), findsNothing);
+    expect(widgetRefreshCount, 1);
+  });
+
+  testWidgets('rejects an empty edit and keeps editing', (
+    WidgetTester tester,
+  ) async {
+    await repository.createTask('Keep title');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.text('Keep title'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.tap(find.byTooltip('Save changes'));
+    await tester.pump();
+
+    expect(find.text('Task title cannot be empty.'), findsOneWidget);
+    expect(find.byType(EditingTaskItem), findsOneWidget);
+    expect((await repository.getTasks()).single.title, 'Keep title');
+    expect(widgetRefreshCount, 0);
+  });
+
+  testWidgets('cancels an edit without changing the title', (
+    WidgetTester tester,
+  ) async {
+    await repository.createTask('Unchanged title');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.text('Unchanged title'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Discard this');
+    await tester.tap(find.byTooltip('Cancel editing'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Unchanged title'), findsOneWidget);
+    expect(find.byType(EditingTaskItem), findsNothing);
+    expect((await repository.getTasks()).single.title, 'Unchanged title');
+    expect(widgetRefreshCount, 0);
+  });
+
+  testWidgets('allows only one task to be edited at a time', (
+    WidgetTester tester,
+  ) async {
+    await repository.createTask('First task');
+    await repository.createTask('Second task');
+    await pumpDewwit(tester);
+
+    await tester.tap(find.text('First task'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditingTaskItem), findsOneWidget);
+
+    await tester.tap(find.text('Second task'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditingTaskItem), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'Second task',
+    );
+    expect((await repository.getTasks()).map((task) => task.title), [
+      'First task',
+      'Second task',
+    ]);
+  });
+
+  testWidgets('edits a completed task without moving it', (
+    WidgetTester tester,
+  ) async {
+    final older = await repository.createTask('Older completed');
+    final newer = await repository.createTask('Newer completed');
+    final olderCompletedAt = DateTime.utc(2026, 9, 3, 8);
+    final newerCompletedAt = DateTime.utc(2026, 9, 3, 9);
+    await repository.setTaskCompletion(
+      older.id,
+      isCompleted: true,
+      completedAt: olderCompletedAt,
+    );
+    final original = await repository.setTaskCompletion(
+      newer.id,
+      isCompleted: true,
+      completedAt: newerCompletedAt,
+    );
+    await pumpDewwit(tester);
+
+    await tester.tap(find.text('Newer completed'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Renamed completed');
+    await tester.tap(find.byTooltip('Save changes'));
+    await tester.pumpAndSettle();
+
+    final tasks = await repository.getTasks();
+    final updated = tasks.first;
+    expect(find.text('Completed'), findsOneWidget);
+    expect(updated.title, 'Renamed completed');
+    expect(updated.id, original?.id);
+    expect(updated.createdAt, original?.createdAt);
+    expect(updated.isCompleted, isTrue);
+    expect(updated.completedAt, newerCompletedAt);
+    expect(tasks.last.id, older.id);
+    expect(
+      tester.getTopLeft(find.text('Renamed completed')).dy,
+      lessThan(tester.getTopLeft(find.text('Older completed')).dy),
+    );
   });
 
   testWidgets('undoes deletion of an active task with its original identity', (
@@ -387,6 +517,27 @@ class _FakeTaskRepository extends TaskRepository {
         return secondCompletedAt.compareTo(firstCompletedAt);
       });
     return List.unmodifiable(tasks);
+  }
+
+  @override
+  Future<Task?> updateTaskTitle(int id, String title) async {
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty) {
+      throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
+    }
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index == -1) return null;
+
+    final current = _tasks[index];
+    final updated = Task(
+      id: current.id,
+      title: normalizedTitle,
+      isCompleted: current.isCompleted,
+      createdAt: current.createdAt,
+      completedAt: current.completedAt,
+    );
+    _tasks[index] = updated;
+    return updated;
   }
 
   @override

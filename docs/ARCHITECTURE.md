@@ -114,6 +114,7 @@ Task operations include:
 ```text
 createTask()
 getTasks()
+updateTaskTitle()
 toggleTask()
 deleteTask()
 ```

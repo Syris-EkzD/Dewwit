@@ -41,6 +41,41 @@ void main() {
     expect(await repository.getTasks(), isEmpty);
   });
 
+  test('updates only the title of an existing task', () async {
+    final created = await repository.createTask('Original title');
+    final completedAt = DateTime.utc(2026, 9, 3, 10, 30);
+    final completed = await repository.setTaskCompletion(
+      created.id,
+      isCompleted: true,
+      completedAt: completedAt,
+    );
+
+    final updated = await repository.updateTaskTitle(
+      created.id,
+      '  Updated title  ',
+    );
+
+    expect(updated?.title, 'Updated title');
+    expect(updated?.id, completed?.id);
+    expect(updated?.createdAt, completed?.createdAt);
+    expect(updated?.isCompleted, completed?.isCompleted);
+    expect(updated?.completedAt, completedAt);
+  });
+
+  test('rejects an empty updated title without changing the task', () async {
+    final task = await repository.createTask('Keep title');
+
+    expect(
+      () => repository.updateTaskTitle(task.id, '  \n  '),
+      throwsA(isA<ArgumentError>()),
+    );
+    expect((await repository.getTasks()).single.title, 'Keep title');
+  });
+
+  test('returns null when updating a title for a missing task', () async {
+    expect(await repository.updateTaskTitle(999, 'New title'), isNull);
+  });
+
   test('toggles task completion in both directions', () async {
     final task = await repository.createTask('Review networking');
 

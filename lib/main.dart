@@ -10,6 +10,7 @@ import 'package:dewwit/theme/dewwit_design.dart';
 import 'package:dewwit/theme/dewwit_theme.dart';
 import 'package:dewwit/widgets/dewwit_task_item.dart';
 import 'package:dewwit/widgets/editable_task_item.dart';
+import 'package:dewwit/widgets/editing_task_item.dart';
 import 'package:dewwit/widgets/empty_task_state.dart';
 import 'package:flutter/material.dart';
 
@@ -110,8 +111,12 @@ class _DewwitHomePageState extends State<DewwitHomePage>
   bool _hasLoadError = false;
   bool _isCreatingTask = false;
   bool _isFinishingDraft = false;
+  int? _editingTaskId;
+  bool _isSavingEdit = false;
   final _draftController = TextEditingController();
   final _draftFocusNode = FocusNode();
+  final _editController = TextEditingController();
+  final _editFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -127,6 +132,8 @@ class _DewwitHomePageState extends State<DewwitHomePage>
     _draftFocusNode.removeListener(_handleDraftFocusChange);
     _draftController.dispose();
     _draftFocusNode.dispose();
+    _editController.dispose();
+    _editFocusNode.dispose();
     super.dispose();
   }
 
@@ -169,6 +176,67 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         _draftFocusNode.requestFocus();
       }
     });
+  }
+
+  void _startEditingTask(Task task) {
+    if (_editingTaskId == task.id) {
+      _editFocusNode.requestFocus();
+      return;
+    }
+
+    if (_isCreatingTask) {
+      _isCreatingTask = false;
+      _draftController.clear();
+    }
+    _editController.text = task.title;
+    _editController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: task.title.length,
+    );
+    setState(() => _editingTaskId = task.id);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _editingTaskId == task.id) {
+        _editFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _cancelEditingTask() {
+    if (_editingTaskId == null || _isSavingEdit) return;
+    _editFocusNode.unfocus();
+    _editController.clear();
+    setState(() => _editingTaskId = null);
+  }
+
+  Future<void> _saveEditedTask() async {
+    final taskId = _editingTaskId;
+    if (taskId == null || _isSavingEdit) return;
+
+    final title = _editController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Task title cannot be empty.')),
+      );
+      _editFocusNode.requestFocus();
+      return;
+    }
+
+    _isSavingEdit = true;
+    final succeeded = await _runMutation(() async {
+      final updated = await widget.taskRepository.updateTaskTitle(
+        taskId,
+        title,
+      );
+      if (updated == null) {
+        throw StateError('Task $taskId no longer exists.');
+      }
+    });
+    _isSavingEdit = false;
+    if (!succeeded || !mounted) return;
+
+    _editFocusNode.unfocus();
+    _editController.clear();
+    setState(() => _editingTaskId = null);
   }
 
   void _handleDraftFocusChange() {
@@ -315,16 +383,19 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         ],
       ),
       body: SafeArea(child: _buildBody()),
-      floatingActionButton: _isCreatingTask
+      floatingActionButton: _isCreatingTask || _editingTaskId != null
           ? null
-          : TextFieldTapRegion(
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: FloatingActionButton(
-                  onPressed: _startCreatingTask,
-                  tooltip: 'Add task',
-                  child: const Icon(Icons.add, size: 32),
+          : Padding(
+              padding: const EdgeInsets.only(right: 8, bottom: 30),
+              child: TextFieldTapRegion(
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: FloatingActionButton(
+                    onPressed: _startCreatingTask,
+                    tooltip: 'Add task',
+                    child: const Icon(Icons.add, size: 26),
+                  ),
                 ),
               ),
             ),
@@ -382,21 +453,34 @@ class _DewwitHomePageState extends State<DewwitHomePage>
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         DewwitSpacing.medium,
-        DewwitSpacing.small,
+        DewwitSpacing.xSmall,
         DewwitSpacing.medium,
         104,
       ),
       itemCount: items.length,
-      separatorBuilder: (context, index) =>
-          const SizedBox(height: DewwitSpacing.small),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) => items[index],
     );
   }
 
-  Widget _buildTaskItem(Task task) => DewwitTaskItem(
-    key: ValueKey(task.id),
-    task: task,
-    onToggle: () => _toggleTask(task),
-    onDelete: () => _deleteTask(task),
-  );
+  Widget _buildTaskItem(Task task) {
+    if (_editingTaskId == task.id) {
+      return EditingTaskItem(
+        key: ValueKey('editing-${task.id}'),
+        task: task,
+        controller: _editController,
+        focusNode: _editFocusNode,
+        onSave: _saveEditedTask,
+        onCancel: _cancelEditingTask,
+      );
+    }
+
+    return DewwitTaskItem(
+      key: ValueKey(task.id),
+      task: task,
+      onToggle: () => _toggleTask(task),
+      onDelete: () => _deleteTask(task),
+      onEdit: () => _startEditingTask(task),
+    );
+  }
 }
