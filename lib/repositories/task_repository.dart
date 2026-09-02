@@ -10,7 +10,7 @@ class TaskRepository {
     : _factory = factory ?? databaseFactory;
 
   static const _databaseName = 'dewwit.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
   static const _tasksTable = 'tasks';
 
   final DatabaseFactory _factory;
@@ -32,6 +32,7 @@ class TaskRepository {
       'title': normalizedTitle,
       'is_completed': 0,
       'created_at': createdAt.millisecondsSinceEpoch,
+      'completed_at': null,
     });
 
     return Task(
@@ -39,6 +40,7 @@ class TaskRepository {
       title: normalizedTitle,
       isCompleted: false,
       createdAt: createdAt,
+      completedAt: null,
     );
   }
 
@@ -46,7 +48,13 @@ class TaskRepository {
     final database = await _getDatabase();
     final rows = await database.query(
       _tasksTable,
-      orderBy: 'created_at ASC, id ASC',
+      orderBy: '''
+        is_completed ASC,
+        CASE WHEN completed_at IS NULL THEN 1 ELSE 0 END ASC,
+        completed_at DESC,
+        created_at ASC,
+        id ASC
+      ''',
     );
 
     return rows.map(Task.fromMap).toList(growable: false);
@@ -59,10 +67,11 @@ class TaskRepository {
       final updatedRows = await transaction.rawUpdate(
         '''
         UPDATE $_tasksTable
-        SET is_completed = CASE is_completed WHEN 0 THEN 1 ELSE 0 END
+        SET completed_at = CASE is_completed WHEN 0 THEN ? ELSE NULL END,
+            is_completed = CASE is_completed WHEN 0 THEN 1 ELSE 0 END
         WHERE id = ?
         ''',
-        [id],
+        [DateTime.now().millisecondsSinceEpoch, id],
       );
       if (updatedRows == 0) {
         return null;
@@ -114,9 +123,17 @@ class TaskRepository {
               title TEXT NOT NULL CHECK(length(trim(title)) > 0),
               is_completed INTEGER NOT NULL DEFAULT 0
                 CHECK(is_completed IN (0, 1)),
-              created_at INTEGER NOT NULL
+              created_at INTEGER NOT NULL,
+              completed_at INTEGER
             )
           ''');
+        },
+        onUpgrade: (database, oldVersion, newVersion) async {
+          if (oldVersion < 2) {
+            await database.execute(
+              'ALTER TABLE $_tasksTable ADD COLUMN completed_at INTEGER',
+            );
+          }
         },
       ),
     );

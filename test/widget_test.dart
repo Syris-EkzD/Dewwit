@@ -42,7 +42,7 @@ void main() {
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
   });
 
-  testWidgets('opens one focused inline draft without a dialog', (
+  testWidgets('opens one focused inline draft and hides the Add FAB', (
     WidgetTester tester,
   ) async {
     await pumpDewwit(tester);
@@ -54,16 +54,14 @@ void main() {
     expect(find.byType(EditableTaskItem), findsOneWidget);
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('No tasks yet'), findsNothing);
+    expect(find.byTooltip('Add task'), findsNothing);
+    expect(find.byType(FloatingActionButton), findsNothing);
     expect(
       tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
       isTrue,
     );
 
     await tester.enterText(find.byType(TextField), 'Draft stays');
-    tester.testTextInput.hide();
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
 
     expect(find.byType(EditableTaskItem), findsOneWidget);
     expect(find.text('Draft stays'), findsOneWidget);
@@ -162,6 +160,28 @@ void main() {
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
 
+  testWidgets('shows active tasks before a newest-first Completed section', (
+    WidgetTester tester,
+  ) async {
+    final oldest = await repository.createTask('Oldest');
+    final middle = await repository.createTask('Middle');
+    await repository.createTask('Newest active');
+    await repository.toggleTask(oldest.id);
+    await tester.pump(const Duration(milliseconds: 2));
+    await repository.toggleTask(middle.id);
+
+    await pumpDewwit(tester);
+
+    expect(find.text('Completed'), findsOneWidget);
+    final activeY = tester.getTopLeft(find.text('Newest active')).dy;
+    final labelY = tester.getTopLeft(find.text('Completed')).dy;
+    final recentY = tester.getTopLeft(find.text('Middle')).dy;
+    final olderY = tester.getTopLeft(find.text('Oldest')).dy;
+    expect(activeY, lessThan(labelY));
+    expect(labelY, lessThan(recentY));
+    expect(recentY, lessThan(olderY));
+  });
+
   testWidgets('changes and persists theme from settings', (
     WidgetTester tester,
   ) async {
@@ -206,13 +226,33 @@ class _FakeTaskRepository extends TaskRepository {
       title: title.trim(),
       isCompleted: false,
       createdAt: DateTime.now().toUtc(),
+      completedAt: null,
     );
     _tasks.add(task);
     return task;
   }
 
   @override
-  Future<List<Task>> getTasks() async => List.unmodifiable(_tasks);
+  Future<List<Task>> getTasks() async {
+    final tasks = List<Task>.of(_tasks)
+      ..sort((first, second) {
+        if (first.isCompleted != second.isCompleted) {
+          return first.isCompleted ? 1 : -1;
+        }
+        if (!first.isCompleted) {
+          return first.createdAt.compareTo(second.createdAt);
+        }
+        final firstCompletedAt = first.completedAt;
+        final secondCompletedAt = second.completedAt;
+        if (firstCompletedAt == null || secondCompletedAt == null) {
+          if (firstCompletedAt == null && secondCompletedAt != null) return 1;
+          if (firstCompletedAt != null && secondCompletedAt == null) return -1;
+          return first.createdAt.compareTo(second.createdAt);
+        }
+        return secondCompletedAt.compareTo(firstCompletedAt);
+      });
+    return List.unmodifiable(tasks);
+  }
 
   @override
   Future<Task?> toggleTask(int id) async {
@@ -225,6 +265,7 @@ class _FakeTaskRepository extends TaskRepository {
       title: current.title,
       isCompleted: !current.isCompleted,
       createdAt: current.createdAt,
+      completedAt: current.isCompleted ? null : DateTime.now().toUtc(),
     );
     _tasks[index] = updated;
     return updated;

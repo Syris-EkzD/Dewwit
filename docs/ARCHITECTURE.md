@@ -83,7 +83,8 @@ Task
 ├── id: int
 ├── title: String
 ├── isCompleted: bool
-└── createdAt: DateTime
+├── createdAt: DateTime
+└── completedAt: DateTime?
 ```
 
 Additional fields should only be introduced when required by an implemented feature.
@@ -164,11 +165,17 @@ tasks
 ├── id INTEGER PRIMARY KEY AUTOINCREMENT
 ├── title TEXT NOT NULL
 ├── is_completed INTEGER NOT NULL
-└── created_at INTEGER NOT NULL
+├── created_at INTEGER NOT NULL
+└── completed_at INTEGER NULL
 ```
 
 Completion is stored as `0` or `1`, and creation time is stored as UTC epoch
-milliseconds.
+milliseconds. Completion time is also stored as UTC epoch milliseconds and is
+cleared when a task returns to active. Schema version 2 adds the nullable
+`completed_at` column without rewriting existing rows. Active tasks retain
+creation order; completed tasks follow in reverse completion order. Legacy
+completed rows with no timestamp follow timestamped completions in creation
+and ID order.
 
 No remote database is required for V1.
 

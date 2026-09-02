@@ -294,6 +294,35 @@ class _DewwitHomePageState extends State<DewwitHomePage>
       return const EmptyTaskState();
     }
 
+    final activeTasks = _tasks.where((task) => !task.isCompleted).toList();
+    final completedTasks = _tasks.where((task) => task.isCompleted).toList();
+    final items = <Widget>[
+      ...activeTasks.map(_buildTaskItem),
+      if (_isCreatingTask)
+        EditableTaskItem(
+          key: const ValueKey('task-draft-row'),
+          controller: _draftController,
+          focusNode: _draftFocusNode,
+          onFinish: _finishDraft,
+        ),
+      if (completedTasks.isNotEmpty) ...[
+        Padding(
+          padding: const EdgeInsets.only(
+            top: DewwitSpacing.small,
+            left: DewwitSpacing.xSmall,
+          ),
+          child: Text(
+            'Completed',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        ...completedTasks.map(_buildTaskItem),
+      ],
+    ];
+
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
         DewwitSpacing.medium,
@@ -301,27 +330,17 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         DewwitSpacing.medium,
         104,
       ),
-      itemCount: _tasks.length + (_isCreatingTask ? 1 : 0),
+      itemCount: items.length,
       separatorBuilder: (context, index) =>
           const SizedBox(height: DewwitSpacing.small),
-      itemBuilder: (context, index) {
-        if (index == _tasks.length) {
-          return EditableTaskItem(
-            key: const ValueKey('task-draft-row'),
-            controller: _draftController,
-            focusNode: _draftFocusNode,
-            onFinish: _finishDraft,
-          );
-        }
-
-        final task = _tasks[index];
-        return DewwitTaskItem(
-          key: ValueKey(task.id),
-          task: task,
-          onToggle: () => _toggleTask(task),
-          onDelete: () => _deleteTask(task),
-        );
-      },
+      itemBuilder: (context, index) => items[index],
     );
   }
+
+  Widget _buildTaskItem(Task task) => DewwitTaskItem(
+    key: ValueKey(task.id),
+    task: task,
+    onToggle: () => _toggleTask(task),
+    onDelete: () => _deleteTask(task),
+  );
 }

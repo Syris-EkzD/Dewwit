@@ -4,12 +4,14 @@ class Task {
     required this.title,
     required this.isCompleted,
     required this.createdAt,
+    required this.completedAt,
   });
 
   final int id;
   final String title;
   final bool isCompleted;
   final DateTime createdAt;
+  final DateTime? completedAt;
 
   factory Task.fromMap(Map<String, Object?> map) {
     return Task(
@@ -20,6 +22,13 @@ class Task {
         map['created_at']! as int,
         isUtc: true,
       ),
+      completedAt: switch (map['completed_at']) {
+        final int timestamp => DateTime.fromMillisecondsSinceEpoch(
+          timestamp,
+          isUtc: true,
+        ),
+        _ => null,
+      },
     );
   }
 }

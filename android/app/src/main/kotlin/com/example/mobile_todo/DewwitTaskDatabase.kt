@@ -20,7 +20,13 @@ object DewwitTaskDatabase {
                 null,
                 null,
                 null,
-                "created_at ASC, id ASC",
+                """
+                is_completed ASC,
+                CASE WHEN completed_at IS NULL THEN 1 ELSE 0 END ASC,
+                completed_at DESC,
+                created_at ASC,
+                id ASC
+                """.trimIndent(),
             ).use { cursor ->
                 buildList {
                     val idIndex = cursor.getColumnIndexOrThrow("id")
@@ -44,10 +50,11 @@ object DewwitTaskDatabase {
             helper.writableDatabase.execSQL(
                 """
                 UPDATE $TASKS_TABLE
-                SET is_completed = CASE is_completed WHEN 0 THEN 1 ELSE 0 END
+                SET completed_at = CASE is_completed WHEN 0 THEN ? ELSE NULL END,
+                    is_completed = CASE is_completed WHEN 0 THEN 1 ELSE 0 END
                 WHERE id = ?
                 """.trimIndent(),
-                arrayOf(taskId),
+                arrayOf(System.currentTimeMillis(), taskId),
             )
         }
     }
@@ -62,16 +69,21 @@ object DewwitTaskDatabase {
                     title TEXT NOT NULL CHECK(length(trim(title)) > 0),
                     is_completed INTEGER NOT NULL DEFAULT 0
                         CHECK(is_completed IN (0, 1)),
-                    created_at INTEGER NOT NULL
+                    created_at INTEGER NOT NULL,
+                    completed_at INTEGER
                 )
                 """.trimIndent(),
             )
         }
 
-        override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+        override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            if (oldVersion < 2) {
+                database.execSQL("ALTER TABLE $TASKS_TABLE ADD COLUMN completed_at INTEGER")
+            }
+        }
     }
 
     private const val DATABASE_NAME = "dewwit.db"
-    private const val DATABASE_VERSION = 1
+    private const val DATABASE_VERSION = 2
     private const val TASKS_TABLE = "tasks"
 }
