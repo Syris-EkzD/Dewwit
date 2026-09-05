@@ -187,8 +187,8 @@ A polished visual design is desirable but is not required for V1 completion.
 
 V1.1 focuses on UI and UX polish. Its settings foundation lets users choose
 System, Light, or Dark application appearance and preserves that selection
-across launches. The native Android home-screen widget retains its existing
-V1 appearance and behavior.
+across launches. The native Android home-screen widget follows the selected
+appearance while retaining its existing V1 behavior.
 
 ---
 

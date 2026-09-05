@@ -4,8 +4,8 @@
 
 This document describes the implemented Dewwit architecture. V1 is complete
 and has been manually validated on a real Android device. V1.1 adds Flutter
-application theme and settings foundations without changing task storage or
-the native Android widget.
+application theme and settings foundations and synchronizes the selected
+appearance with the native Android widget without changing task storage.
 
 ---
 
