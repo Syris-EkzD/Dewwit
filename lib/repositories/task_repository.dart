@@ -13,6 +13,14 @@ class TaskRepository {
 
   TaskRepository.withDatabase(this._database) : _ownsDatabase = false;
 
+  static const _taskOrder = '''
+    is_completed ASC,
+    CASE WHEN completed_at IS NULL THEN 1 ELSE 0 END ASC,
+    completed_at DESC,
+    created_at ASC,
+    id ASC
+  ''';
+
   final KedisDatabase _database;
   final bool _ownsDatabase;
 
@@ -47,19 +55,28 @@ class TaskRepository {
     );
   }
 
-  Future<List<Task>> getTasks() async {
+  Future<List<Task>> getTasks({int? categoryId}) async {
     final database = await _database.database;
     final rows = await database.query(
       KedisDatabase.tasksTable,
-      orderBy: '''
-        is_completed ASC,
-        CASE WHEN completed_at IS NULL THEN 1 ELSE 0 END ASC,
-        completed_at DESC,
-        created_at ASC,
-        id ASC
-      ''',
+      where: categoryId == null ? null : 'category_id = ?',
+      whereArgs: categoryId == null ? null : [categoryId],
+      orderBy: _taskOrder,
     );
 
+    return rows.map(Task.fromMap).toList(growable: false);
+  }
+
+  Future<List<Task>> getActiveTasks({int? categoryId}) async {
+    final database = await _database.database;
+    final rows = await database.query(
+      KedisDatabase.tasksTable,
+      where: categoryId == null
+          ? 'is_completed = 0'
+          : 'is_completed = 0 AND category_id = ?',
+      whereArgs: categoryId == null ? null : [categoryId],
+      orderBy: 'created_at ASC, id ASC',
+    );
     return rows.map(Task.fromMap).toList(growable: false);
   }
 
@@ -80,6 +97,20 @@ class TaskRepository {
       return null;
     }
 
+    return _getTask(database, id);
+  }
+
+  Future<Task?> moveTaskToCategory(int id, int categoryId) async {
+    final database = await _database.database;
+    final updatedRows = await database.update(
+      KedisDatabase.tasksTable,
+      {'category_id': categoryId},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (updatedRows == 0) {
+      return null;
+    }
     return _getTask(database, id);
   }
 
