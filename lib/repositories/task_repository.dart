@@ -16,7 +16,7 @@ class TaskRepository {
   final KedisDatabase _database;
   final bool _ownsDatabase;
 
-  Future<Task> createTask(String title) async {
+  Future<Task> createTask(String title, {int? categoryId}) async {
     final normalizedTitle = title.trim();
     if (normalizedTitle.isEmpty) {
       throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
@@ -27,11 +27,14 @@ class TaskRepository {
       isUtc: true,
     );
     final database = await _database.database;
+    final resolvedCategoryId =
+        categoryId ?? await KedisDatabase.getInboxId(database);
     final id = await database.insert(KedisDatabase.tasksTable, {
       'title': normalizedTitle,
       'is_completed': 0,
       'created_at': createdAt.millisecondsSinceEpoch,
       'completed_at': null,
+      'category_id': resolvedCategoryId,
     });
 
     return Task(
@@ -40,6 +43,7 @@ class TaskRepository {
       isCompleted: false,
       createdAt: createdAt,
       completedAt: null,
+      categoryId: resolvedCategoryId,
     );
   }
 
@@ -76,13 +80,7 @@ class TaskRepository {
       return null;
     }
 
-    final rows = await database.query(
-      KedisDatabase.tasksTable,
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
-    return Task.fromMap(rows.single);
+    return _getTask(database, id);
   }
 
   Future<Task?> toggleTask(int id) async {
@@ -102,13 +100,7 @@ class TaskRepository {
         return null;
       }
 
-      final rows = await transaction.query(
-        KedisDatabase.tasksTable,
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-      return Task.fromMap(rows.single);
+      return _getTask(transaction, id);
     });
   }
 
@@ -138,13 +130,7 @@ class TaskRepository {
         return null;
       }
 
-      final rows = await transaction.query(
-        KedisDatabase.tasksTable,
-        where: 'id = ?',
-        whereArgs: [id],
-        limit: 1,
-      );
-      return Task.fromMap(rows.single);
+      return _getTask(transaction, id);
     });
   }
 
@@ -166,6 +152,7 @@ class TaskRepository {
       'is_completed': task.isCompleted ? 1 : 0,
       'created_at': task.createdAt.millisecondsSinceEpoch,
       'completed_at': task.completedAt?.millisecondsSinceEpoch,
+      'category_id': task.categoryId,
     });
     return task;
   }
@@ -174,5 +161,18 @@ class TaskRepository {
     if (_ownsDatabase) {
       await _database.close();
     }
+  }
+
+  Future<Task?> _getTask(DatabaseExecutor database, int id) async {
+    final rows = await database.query(
+      KedisDatabase.tasksTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return Task.fromMap(rows.single);
   }
 }
