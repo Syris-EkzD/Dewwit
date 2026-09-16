@@ -7,6 +7,7 @@ import 'package:kedis/settings/settings_screen.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/theme/kedis_design.dart';
 import 'package:kedis/widgets/category_card.dart';
+import 'package:kedis/widgets/category_editor_dialog.dart';
 import 'package:flutter/material.dart';
 
 class CategoryHomeScreen extends StatefulWidget {
@@ -140,10 +141,82 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       await _loadOverview();
     } on Object {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Could not create task.')));
+      _showMessage('Could not create task.');
     }
+  }
+
+  Future<void> _createCategory() async {
+    final result = await showCategoryEditorDialog(context);
+    if (result == null || !mounted) return;
+
+    try {
+      await widget.categoryRepository.createCategory(
+        result.name,
+        result.colorValue,
+      );
+      await _loadOverview();
+    } on StateError catch (error) {
+      if (mounted) _showMessage(error.message.toString());
+    } on Object {
+      if (mounted) _showMessage('Could not create category.');
+    }
+  }
+
+  Future<void> _editCategory(TaskCategory category) async {
+    final result = await showCategoryEditorDialog(context, category: category);
+    if (result == null || !mounted) return;
+
+    try {
+      if (result.name != category.name) {
+        await widget.categoryRepository.renameCategory(category.id, result.name);
+      }
+      if (result.colorValue != category.colorValue) {
+        await widget.categoryRepository.updateCategoryColor(
+          category.id,
+          result.colorValue,
+        );
+      }
+      await _loadOverview();
+    } on StateError catch (error) {
+      if (mounted) _showMessage(error.message.toString());
+    } on Object {
+      if (mounted) _showMessage('Could not update category.');
+    }
+  }
+
+  Future<void> _deleteCategory(TaskCategory category) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${category.name}?'),
+        content: const Text('Its tasks will be moved to Inbox.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDelete != true || !mounted) return;
+
+    try {
+      await widget.categoryRepository.deleteCategory(category.id);
+      await widget.widgetRefresh();
+      await _loadOverview();
+    } on StateError catch (error) {
+      if (mounted) _showMessage(error.message.toString());
+    } on Object {
+      if (mounted) _showMessage('Could not delete category.');
+    }
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -170,6 +243,11 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           ],
         ),
         actions: [
+          IconButton(
+            onPressed: _createCategory,
+            tooltip: 'Add category',
+            icon: const Icon(Icons.create_new_folder_outlined),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: KedisSpacing.small),
             child: IconButton(
@@ -238,6 +316,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           activeCount: categoryTasks.length,
           previewTasks: previewTasks,
           onTap: () => _openCategory(category),
+          onEdit: category.isSystem ? null : () => _editCategory(category),
+          onDelete: category.isSystem ? null : () => _deleteCategory(category),
         );
       },
     );

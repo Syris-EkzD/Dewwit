@@ -9,6 +9,8 @@ class CategoryCard extends StatelessWidget {
     required this.activeCount,
     required this.previewTasks,
     required this.onTap,
+    this.onEdit,
+    this.onDelete,
     super.key,
   });
 
@@ -16,6 +18,8 @@ class CategoryCard extends StatelessWidget {
   final int activeCount;
   final List<Task> previewTasks;
   final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +40,7 @@ class CategoryCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(
             KedisSpacing.medium,
             KedisSpacing.medium,
-            KedisSpacing.medium,
+            KedisSpacing.small,
             KedisSpacing.medium,
           ),
           child: Column(
@@ -62,6 +66,32 @@ class CategoryCard extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
+                  if (onEdit != null && onDelete != null)
+                    PopupMenuButton<_CategoryCardAction>(
+                      tooltip: 'Category actions',
+                      onSelected: (action) {
+                        switch (action) {
+                          case _CategoryCardAction.edit:
+                            onEdit?.call();
+                            break;
+                          case _CategoryCardAction.delete:
+                            onDelete?.call();
+                            break;
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: _CategoryCardAction.edit,
+                          child: Text('Edit category'),
+                        ),
+                        PopupMenuItem(
+                          value: _CategoryCardAction.delete,
+                          child: Text('Delete category'),
+                        ),
+                      ],
+                    )
+                  else
+                    const SizedBox(width: KedisSpacing.small),
                 ],
               ),
               if (previewTasks.isEmpty) ...[
@@ -123,3 +153,5 @@ class CategoryCard extends StatelessWidget {
     );
   }
 }
+
+enum _CategoryCardAction { edit, delete }
