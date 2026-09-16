@@ -125,10 +125,7 @@ class CategoryRepository {
     }
   }
 
-  Future<TaskCategory?> _getCategory(
-    DatabaseExecutor database,
-    int id,
-  ) async {
+  Future<TaskCategory?> _getCategory(DatabaseExecutor database, int id) async {
     final rows = await database.query(
       KedisDatabase.categoriesTable,
       where: 'id = ?',
