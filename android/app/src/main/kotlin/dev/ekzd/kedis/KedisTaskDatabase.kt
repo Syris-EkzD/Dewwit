@@ -1,5 +1,6 @@
 package dev.ekzd.kedis
 
+import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
@@ -61,30 +62,121 @@ object KedisTaskDatabase {
 
     private class Helper(context: Context) :
         SQLiteOpenHelper(context.applicationContext, DATABASE_NAME, null, DATABASE_VERSION) {
+        override fun onConfigure(database: SQLiteDatabase) {
+            super.onConfigure(database)
+            database.setForeignKeyConstraintsEnabled(true)
+        }
+
         override fun onCreate(database: SQLiteDatabase) {
-            database.execSQL(
-                """
-                CREATE TABLE $TASKS_TABLE (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT NOT NULL CHECK(length(trim(title)) > 0),
-                    is_completed INTEGER NOT NULL DEFAULT 0
-                        CHECK(is_completed IN (0, 1)),
-                    created_at INTEGER NOT NULL,
-                    completed_at INTEGER
-                )
-                """.trimIndent(),
-            )
+            createCategoriesTable(database)
+            insertInbox(database)
+            createTasksTable(database)
         }
 
         override fun onUpgrade(database: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) {
                 database.execSQL("ALTER TABLE $TASKS_TABLE ADD COLUMN completed_at INTEGER")
             }
+            if (oldVersion < 3) {
+                migrateToCategories(database)
+            }
         }
+    }
+
+    private fun createCategoriesTable(database: SQLiteDatabase) {
+        database.execSQL(
+            """
+            CREATE TABLE $CATEGORIES_TABLE (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+                color_value INTEGER NOT NULL,
+                is_system INTEGER NOT NULL DEFAULT 0 CHECK(is_system IN (0, 1)),
+                system_key TEXT UNIQUE,
+                created_at INTEGER NOT NULL,
+                CHECK(
+                    (is_system = 1 AND system_key IS NOT NULL) OR
+                    (is_system = 0 AND system_key IS NULL)
+                )
+            )
+            """.trimIndent(),
+        )
+        database.execSQL(
+            """
+            CREATE UNIQUE INDEX categories_name_nocase_unique
+            ON $CATEGORIES_TABLE(name COLLATE NOCASE)
+            """.trimIndent(),
+        )
+    }
+
+    private fun insertInbox(database: SQLiteDatabase): Long {
+        val values = ContentValues().apply {
+            put("name", INBOX_NAME)
+            put("color_value", INBOX_COLOR_VALUE)
+            put("is_system", 1)
+            put("system_key", INBOX_SYSTEM_KEY)
+            put("created_at", 0L)
+        }
+        return database.insertOrThrow(CATEGORIES_TABLE, null, values)
+    }
+
+    private fun createTasksTable(database: SQLiteDatabase) {
+        database.execSQL(
+            """
+            CREATE TABLE $TASKS_TABLE (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL CHECK(length(trim(title)) > 0),
+                is_completed INTEGER NOT NULL DEFAULT 0
+                    CHECK(is_completed IN (0, 1)),
+                created_at INTEGER NOT NULL,
+                completed_at INTEGER,
+                category_id INTEGER NOT NULL
+                    REFERENCES $CATEGORIES_TABLE(id) ON DELETE RESTRICT
+            )
+            """.trimIndent(),
+        )
+        database.execSQL(
+            """
+            CREATE INDEX tasks_category_id_idx
+            ON $TASKS_TABLE(category_id)
+            """.trimIndent(),
+        )
+    }
+
+    private fun migrateToCategories(database: SQLiteDatabase) {
+        createCategoriesTable(database)
+        val inboxId = insertInbox(database)
+        database.execSQL("ALTER TABLE $TASKS_TABLE RENAME TO tasks_v2")
+        createTasksTable(database)
+        database.execSQL(
+            """
+            INSERT INTO $TASKS_TABLE (
+                id,
+                title,
+                is_completed,
+                created_at,
+                completed_at,
+                category_id
+            )
+            SELECT
+                id,
+                title,
+                is_completed,
+                created_at,
+                completed_at,
+                ?
+            FROM tasks_v2
+            """.trimIndent(),
+            arrayOf(inboxId),
+        )
+        database.execSQL("DROP TABLE tasks_v2")
     }
 
     // Public product identity changed, but the authoritative database filename did not.
     private const val DATABASE_NAME = "dewwit.db"
-    private const val DATABASE_VERSION = 2
+    private const val DATABASE_VERSION = 3
     private const val TASKS_TABLE = "tasks"
+    private const val CATEGORIES_TABLE = "categories"
+    private const val INBOX_SYSTEM_KEY = "inbox"
+    private const val INBOX_NAME = "Inbox"
+    private const val INBOX_COLOR_VALUE = 0xFF426A5AL
 }
