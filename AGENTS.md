@@ -4,7 +4,7 @@
 
 Kedis by EkzD.dev is a local-first Android task manager built with Flutter. It is the renamed continuation of the existing Dewwit application.
 
-The current codebase already provides a working checklist, local SQLite persistence, Android home-screen widget interaction, theme/settings behavior, and app/widget synchronization. Kedis V1 will later add categories, acknowledgement, stale-task detection, and restrained reminder notifications.
+The current codebase provides a working checklist, persistent custom categories, a built-in Inbox, Android home-screen widget interaction, theme/settings behavior, and app/widget synchronization. Kedis V1 will later add acknowledgement, stale-task detection, and restrained reminder notifications.
 
 Reliability, maintainability, and ease of use take priority over feature quantity.
 
@@ -29,11 +29,17 @@ Unless a task explicitly changes this behavior, preserve:
 - Task creation and display.
 - Inline task-title editing.
 - Completion and uncompletion.
-- Deletion.
-- Existing undo behavior.
-- Current active/completed ordering.
+- Deletion and existing undo behavior.
+- Active/completed ordering.
 - SQLite persistence.
-- Android home-screen widget display and task completion interaction.
+- User-created, color-coded categories.
+- Durable system Inbox.
+- Category-card home screen with compact active-task previews.
+- Home quick capture into Inbox.
+- Category-specific task capture.
+- Task movement between categories.
+- Safe custom-category deletion that moves tasks to Inbox.
+- Android home-screen widget display and task completion interaction across all categories.
 - Shared application/widget task state.
 - Widget refresh after Flutter-side mutations.
 - Task reload when the application resumes.
@@ -46,9 +52,6 @@ Unless a task explicitly changes this behavior, preserve:
 
 The following are product goals, not currently implemented behavior:
 
-- User-created, color-coded categories.
-- Safe category rename/deletion flows.
-- Category-aware task capture and a lightweight Inbox/default location.
 - Task acknowledgement separate from completion.
 - Stale-task detection derived from acknowledgement or meaningful activity.
 - Restrained local notifications that resurface stale tasks.
@@ -57,9 +60,21 @@ Implement these only through an explicit future task. Do not add their database 
 
 ---
 
+## Category rules
+
+- Inbox is identified by durable system key `inbox`, never by a magic numeric ID.
+- Inbox cannot be renamed, recolored, or deleted unless product scope changes deliberately.
+- Tasks store category IDs, not category names.
+- Category deletion must move tasks to Inbox before deleting the category.
+- Category colors are stable integer ARGB values in SQLite.
+- Home previews show active tasks only and stay compact.
+- The Android widget remains a global cross-category checklist unless a separate task changes that product decision.
+
+---
+
 ## Outside Kedis V1
 
-Do not implement or design around budget/finance features, AI/LLM features, cloud sync, user accounts, Google Sign-In, Google Calendar, collaboration, web functionality, iOS-specific functionality, recurring tasks, complex priorities, tags, subtasks, or mandatory due dates unless product scope is explicitly changed.
+Do not implement or design around budget/finance features, AI/LLM features, cloud sync, user accounts, Google Sign-In, Google Calendar, collaboration, web functionality, iOS-specific functionality, recurring tasks, complex priorities, tags, subtasks, mandatory due dates, drag-and-drop ordering, category nesting, category icons, or widget category filtering unless product scope is explicitly changed.
 
 ---
 
@@ -79,7 +94,17 @@ Current public/project identity:
 - Android namespace/application ID: `dev.ekzd.kedis`
 - Product label: `Kedis`
 
-The repository may still contain generated, inactive non-Android platform scaffolding. Android is the current product target; do not broaden an Android task into desktop, web, or iOS work without a concrete requirement.
+Android is the current product target. Do not broaden an Android task into inactive desktop, web, or iOS scaffolding without a concrete requirement.
+
+---
+
+## Persistence boundaries
+
+`KedisDatabase` owns SQLite lifecycle and schema migration. `TaskRepository` and `CategoryRepository` share the same database in the application process.
+
+Current schema version is 3. Both Flutter and native Kotlin database helpers must stay schema-compatible because either side may open the authoritative database.
+
+Foreign-key behavior must never silently delete tasks when a category is removed.
 
 ---
 
@@ -90,13 +115,14 @@ The repository may still contain generated, inactive non-Android platform scaffo
 3. Avoid premature abstraction and speculative architecture.
 4. Introduce dependencies only when they solve an implemented requirement.
 5. Keep Flutter/native boundaries explicit.
-6. Keep the SQLite task store authoritative; do not create duplicate task state.
-7. Keep files and classes reasonably small and focused.
-8. Preserve comments that explain non-obvious synchronization or compatibility behavior.
-9. Do not suppress failures merely to make checks pass.
-10. Do not silently expand product scope.
-11. Keep task capture and common interactions lightweight.
-12. Prefer boring, understandable code over clever code.
+6. Keep SQLite authoritative; do not create duplicate task/category stores.
+7. Avoid N+1 category-card queries when a bounded aggregate/in-memory grouping is sufficient.
+8. Keep files and classes reasonably small and focused.
+9. Preserve comments that explain non-obvious synchronization or compatibility behavior.
+10. Do not suppress failures merely to make checks pass.
+11. Do not silently expand product scope.
+12. Keep task capture and common interactions lightweight.
+13. Prefer boring, understandable code over clever code.
 
 ---
 
@@ -106,20 +132,18 @@ For substantial work:
 
 1. Read this file and the relevant documents under `docs/`.
 2. Inspect the implementation before changing behavior.
-3. Identify Flutter, Android widget, persistence, resource, and test dependencies affected by the task.
+3. Identify Flutter, Android widget, persistence, migration, resource, and test dependencies affected by the task.
 4. Make the smallest coherent change.
-5. Update tests without deleting meaningful coverage to accommodate implementation changes.
-6. Run all applicable validation.
-7. Search for stale references when a rename or migration is involved and classify intentional compatibility values instead of blindly replacing them.
+5. Keep database migrations independently reviewable where practical.
+6. Update tests without deleting meaningful coverage.
+7. Run focused checks during development and the complete quality gate before merge.
 8. Report exactly what changed and what could not be verified.
-
-Do not use blind repository-wide search-and-replace for identity changes that touch persistence, Android packages, platform channels, resources, or widgets.
 
 ---
 
 ## Validation
 
-For changes affecting Flutter, Dart, Android identity, or the native widget, run where applicable:
+For changes affecting Flutter, Dart, persistence, categories, or the native widget, run where applicable:
 
 ```bash
 dart format --output=none --set-exit-if-changed lib test
@@ -129,24 +153,17 @@ flutter build apk --debug
 git diff --check
 ```
 
-Also inspect Android package/resource references and search relevant files for stale product identifiers.
+The repository also has a required GitHub Actions `quality-gate`. Do not weaken or bypass it.
 
-If the environment supports runtime testing, smoke-check application launch, task creation, completion, editing, Settings, and the Android widget. Never claim a command or manual check succeeded unless it was actually performed.
+If the environment supports runtime testing, smoke-check application launch, migration, category CRUD, task movement, task edit/completion/deletion/undo, Settings, persistence, and the Android widget. Never claim a command or manual check succeeded unless it was actually performed.
 
 ---
 
 ## Git practices
 
-Keep commits focused and do not commit generated build output, secrets, credentials, or unrelated refactors.
+Keep changes focused and use milestone commits for substantial features. Do not commit generated build output, secrets, credentials, or unrelated refactors.
 
-Use Conventional Commit style where practical, for example:
-
-```text
-feat: add category management
-fix(widget): refresh stale task state
-refactor: clarify acknowledgement flow
-chore: rename Dewwit to Kedis
-```
+Use Conventional Commit style where practical.
 
 ---
 

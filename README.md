@@ -2,35 +2,37 @@
 
 **Kedis by EkzD.dev** is a local-first Android task manager built with Flutter.
 
-Kedis is designed to keep task capture lightweight while eventually helping surface active tasks that have gone too long without acknowledgement. The current application already provides the reliable checklist foundation; Kedis V1 will extend that foundation with categories, acknowledgement, stale-task detection, and restrained reminder pings.
+Kedis keeps task capture lightweight while organizing tasks into persistent categories. The Android home-screen widget remains a fast global checklist surface across categories.
 
 ## Status
 
-The existing task foundation is implemented. The Kedis V1 organization and reminder features described below are planned and are **not implemented yet**.
+The checklist foundation and Kedis V1 category system are implemented. Task acknowledgement, stale-task detection, and reminder notifications remain planned and are **not implemented yet**.
 
 ### Implemented now
 
-- Create and view tasks
-- Edit task titles
-- Complete and uncomplete tasks
-- Delete tasks and undo relevant task actions
-- Keep active tasks in creation order and completed tasks in reverse completion order
+- Create, edit, complete, uncomplete, and delete tasks
+- Undo supported completion and deletion actions
+- Preserve active/completed ordering
 - Persist tasks locally in SQLite
-- Display and complete tasks from an Android home-screen widget
-- Keep application and widget task state synchronized
-- Reload task state when the application resumes
-- Use System, Light, or Dark appearance in the application and widget
+- User-created, color-coded task categories
+- Built-in Inbox for zero-friction capture and migrated legacy tasks
+- Category cards with active-task counts and compact previews
+- Full task lists inside categories
+- Create tasks directly in the current category
+- Move existing tasks between categories without changing task state
+- Safely delete custom categories by moving their tasks to Inbox
+- Android home-screen widget showing tasks across all categories
+- Complete and uncomplete tasks from the widget
+- App/widget synchronization and lifecycle reload behavior
+- System, Light, and Dark appearance in the application and widget
 
 ### Planned for Kedis V1
 
-- User-created, color-coded task categories
-- A lightweight default location such as Inbox for uncategorized tasks
-- Task acknowledgement that is separate from completion
-- Stale-task detection derived from acknowledgement or meaningful task activity
+- Task acknowledgement separate from completion
+- Stale-task detection derived from acknowledgement or meaningful activity
 - Restrained local reminder notifications for stale tasks
-- Category-aware quick capture without making basic task creation cumbersome
 
-Kedis V1 does not require due dates for stale-task reminders.
+Kedis V1 does not require mandatory due dates.
 
 ## Kedis V1 non-goals
 
@@ -41,13 +43,29 @@ Budget or transaction tracking, financial accounts or recommendations, AI/LLM fe
 - Flutter and Dart
 - Native Android widget code in Kotlin
 - SQLite through `sqflite` and Android SQLite APIs
-- `shared_preferences` for the application appearance preference
+- `shared_preferences` for application appearance preference
 
 Development currently targets Android. Core task management is offline-first and requires no backend.
 
+## Category behavior
+
+Inbox is a durable system category. Quick capture from the home screen creates tasks in Inbox, while capture inside a category assigns that category automatically. Inbox cannot be renamed or deleted.
+
+Deleting a custom category never deletes its tasks. Kedis moves those tasks to Inbox before removing the category.
+
+The home screen shows category cards with active-task counts and up to three active-task previews. Completed tasks remain available inside each category but do not clutter the home preview.
+
+## Widget behavior
+
+The Android widget remains category-agnostic for Kedis V1. It reads the same authoritative SQLite database and continues to display tasks across all categories using the existing task ordering semantics.
+
 ## Compatibility note
 
-The public product is Kedis, but the existing authoritative SQLite filename remains `dewwit.db`. This is intentional: renaming or migrating the database is outside this product-rename task and must not be done casually because both Flutter and the native widget depend on it.
+The public product is Kedis, but these internal compatibility identifiers intentionally remain unchanged:
+
+- SQLite database filename: `dewwit.db`
+- Flutter/native widget channel: `dewwit/widget`
+- Native widget theme preferences: `dewwit_widget_preferences`
 
 ## Run
 
@@ -77,4 +95,4 @@ git diff --check
 
 ## Development principle
 
-Kedis should stay fast to open, fast to capture into, and easy to understand. Reliability and maintainability take priority over adding feature quantity or speculative architecture.
+Kedis should stay fast to open, fast to capture into, and easy to understand. Reliability and maintainability take priority over feature quantity or speculative architecture.

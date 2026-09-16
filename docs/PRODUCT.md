@@ -24,48 +24,88 @@ The Android home-screen widget remains a core part of the product rather than an
 
 # Current implemented foundation
 
-The current Kedis codebase is the renamed continuation of the working Dewwit task foundation. The following behavior is implemented today and must remain reliable while Kedis V1 expands:
+The following behavior is implemented today and must remain reliable as Kedis V1 expands:
 
-- Create tasks.
-- View active and completed tasks.
-- Edit task titles inline.
+- Create, view, and edit tasks.
 - Complete and uncomplete tasks.
-- Delete tasks.
-- Undo completion, uncompletion, and deletion where currently supported.
+- Delete tasks and undo supported task actions.
 - Persist task data locally in SQLite.
 - Keep active tasks in creation order.
-- Keep completed tasks in reverse completion order, with safe handling for legacy rows without completion timestamps.
-- Add an Android home-screen widget.
-- Display task state from the same authoritative SQLite database in the widget.
+- Keep completed tasks in reverse completion order, including safe handling for legacy rows without completion timestamps.
+- Add and use an Android home-screen widget backed by the same SQLite database.
 - Complete and uncomplete tasks from the widget.
 - Refresh the widget after application-side task mutations.
-- Reload application task state after returning to the app so widget-side changes appear.
-- Select System, Light, or Dark application appearance.
-- Mirror the selected appearance to the native Android widget.
+- Reload task state when the app resumes.
+- Select System, Light, or Dark application appearance and mirror it to the widget.
 
-The existing checklist behavior is not a temporary prototype. It is the stable base that planned Kedis V1 features must extend without making ordinary task capture cumbersome.
+## Custom categories
+
+Kedis supports persistent user-created task categories.
+
+Users can:
+
+- Create categories.
+- Rename custom categories.
+- Choose and change a category color from a small palette.
+- Delete custom categories safely.
+- Create and manage tasks inside categories.
+- Move existing tasks between categories.
+
+Category names are trimmed before persistence and duplicate names are prevented case-insensitively.
+
+## Inbox
+
+Kedis always has a system category named **Inbox**.
+
+Inbox exists automatically on fresh databases and after migration from pre-category schema versions. Existing tasks are migrated into Inbox without changing their IDs, titles, completion state, creation timestamps, or completion timestamps.
+
+Home-level quick capture creates a task in Inbox. Creating a task while viewing another category assigns that task directly to the current category.
+
+Inbox cannot be renamed, recolored, or deleted in Kedis V1.
+
+## Safe category deletion
+
+Deleting a custom category never deletes its tasks. Kedis first moves every task from that category to Inbox and then removes the category. The UI confirms this behavior before deletion.
+
+## Category home
+
+The Kedis home screen primarily displays category cards.
+
+Each card shows:
+
+- Category name.
+- Category color accent.
+- Active-task count.
+- Up to three active-task previews.
+- A compact `+N more` indicator when additional active tasks exist.
+
+Completed tasks do not appear in category-card previews. Tapping a card opens the full task list for that category.
+
+## Category task screen
+
+Inside a category, the existing checklist behavior is preserved:
+
+- Active tasks first.
+- Completed tasks after active tasks.
+- Inline task creation.
+- Inline task-title editing.
+- Completion and uncompletion.
+- Deletion and supported undo behavior.
+- Moving a task to another existing category.
+
+Task moves change only category assignment; task identity, completion state, and timestamps remain unchanged.
+
+## Android widget
+
+The Android widget remains a global checklist surface in this category release.
+
+It continues to show tasks across all categories and preserves the existing global task ordering and direct completion behavior. It does not show category cards, category-management controls, or category filters.
 
 ---
 
 # Kedis V1 planned scope
 
-The features in this section are approved Kedis V1 product goals, but **they are not implemented yet**. Documentation must not describe them as working behavior until their implementation has been completed and verified.
-
-## Custom categories
-
-Kedis V1 will support multiple user-defined task categories. Example categories may include School, Programming, Daily Bullshit, Personal, or Shopping, but examples must never become hard-coded categories.
-
-Users should eventually be able to:
-
-- Create categories.
-- Rename categories.
-- Delete categories safely.
-- Assign colors to categories.
-- Create and manage tasks within categories.
-
-A lightweight default location such as Inbox may hold tasks that have not yet been organized.
-
-When a user is already viewing a category, creating a task should naturally place that task in the current category without requiring extra fields or screens.
+The following product goals are approved but **not implemented yet**.
 
 ## Task acknowledgement
 
@@ -75,39 +115,23 @@ Acknowledgement means, conceptually:
 
 > I know this task is still here and I still intend to deal with it.
 
-A reminder should not force the user to mark a task complete just to stop treating it as forgotten. Kedis V1 should eventually track when an active task was last acknowledged or otherwise meaningfully interacted with.
+A reminder should not force the user to mark a task complete just to stop treating it as forgotten.
 
 ## Stale tasks
 
 Kedis V1 will identify active tasks that have gone an appropriate amount of time without acknowledgement or meaningful interaction.
 
-Staleness should be derived state, not a permanent manually maintained flag. A task may be visually marked as stale or needing attention when appropriate.
-
-Mandatory due dates are not required for this system.
+Staleness should be derived state, not a permanent manually maintained flag. Mandatory due dates are not required for this system.
 
 ## Reminder pings
 
-Kedis should eventually send local notifications for stale tasks that may have been forgotten.
-
-The goal is useful resurfacing, not notification spam. Reminder behavior should favor restrained summaries or appropriately paced reminders instead of emitting one notification for every stale task.
-
-## Ease of use
-
-Ease of use is a Kedis V1 requirement, not merely visual polish.
-
-- Opening Kedis should feel lightweight.
-- Quick capture should require minimal interaction.
-- The basic task flow should remain understandable without configuring advanced fields.
-- Category context should reduce work rather than add work.
-- Future stale-task and reminder controls should not turn task creation into a form.
-
-When product goals conflict, preserving a fast and dependable core checklist is preferred over adding complexity merely because another task manager has it.
+Kedis should eventually send restrained local notifications for stale tasks that may have been forgotten. The goal is useful resurfacing, not notification spam.
 
 ---
 
 # Kedis V1 non-goals
 
-The following are outside active Kedis V1 implementation scope:
+The following remain outside active Kedis V1 scope:
 
 - Budget tracking.
 - Financial accounts.
@@ -126,8 +150,9 @@ The following are outside active Kedis V1 implementation scope:
 - Tags.
 - Subtasks.
 - Mandatory due dates.
-
-These may be reconsidered later if real usage creates a concrete need. Do not design current architecture around them in advance.
+- Drag-and-drop ordering or category reordering.
+- Category nesting or category icons.
+- Widget category filtering or category cards.
 
 ---
 
@@ -135,7 +160,7 @@ These may be reconsidered later if real usage creates a concrete need. Do not de
 
 ## Reliability before feature quantity
 
-Existing task and widget behavior must stay dependable as Kedis grows.
+Existing task, category, migration, and widget behavior must stay dependable as Kedis grows.
 
 ## Local-first operation
 
@@ -143,7 +168,7 @@ Core task management must remain useful without an internet connection.
 
 ## Fast interaction
 
-Common actions such as opening the app, capturing a task, acknowledging a task, and completing a task should require minimal effort.
+Quick capture should remain lightweight. Category context should reduce work rather than turn task creation into a form.
 
 ## Progressive complexity
 
@@ -155,4 +180,4 @@ Observed friction from day-to-day use may legitimately change priorities. Planne
 
 ## Architecture follows implemented requirements
 
-Categories, acknowledgement, stale detection, and reminders will require deliberate implementation work later. Their future presence does not justify adding unused domain fields, modules, services, dependencies, or abstractions during unrelated tasks.
+Acknowledgement, stale detection, and reminders will require deliberate implementation work later. Their future presence does not justify adding unused fields, services, dependencies, or abstractions today.
