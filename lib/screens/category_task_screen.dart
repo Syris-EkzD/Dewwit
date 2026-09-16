@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:kedis/models/task.dart';
 import 'package:kedis/models/task_category.dart';
+import 'package:kedis/repositories/category_repository.dart';
 import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/theme/kedis_design.dart';
 import 'package:kedis/widgets/editable_task_item.dart';
@@ -13,12 +14,14 @@ import 'package:flutter/material.dart';
 class CategoryTaskScreen extends StatefulWidget {
   const CategoryTaskScreen({
     required this.category,
+    required this.categoryRepository,
     required this.taskRepository,
     required this.widgetRefresh,
     super.key,
   });
 
   final TaskCategory category;
+  final CategoryRepository categoryRepository;
   final TaskRepository taskRepository;
   final Future<void> Function() widgetRefresh;
 
@@ -251,6 +254,69 @@ class _CategoryTaskScreenState extends State<CategoryTaskScreen>
     });
   }
 
+  Future<void> _moveTask(Task task) async {
+    List<TaskCategory> categories;
+    try {
+      categories = await widget.categoryRepository.getCategories();
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load categories.')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final destinations = categories
+        .where((category) => category.id != task.categoryId)
+        .toList(growable: false);
+    if (destinations.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other categories yet.')),
+      );
+      return;
+    }
+
+    final targetCategoryId = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Move task to'),
+        children: [
+          for (final category in destinations)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(context).pop(category.id),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Color(category.colorValue),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: KedisSpacing.small),
+                  Expanded(child: Text(category.name)),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (targetCategoryId == null || !mounted) return;
+
+    await _runMutation(() async {
+      final moved = await widget.taskRepository.moveTaskToCategory(
+        task.id,
+        targetCategoryId,
+      );
+      if (moved == null) {
+        throw StateError('Task ${task.id} no longer exists.');
+      }
+    });
+  }
+
   Future<bool> _runMutation(Future<void> Function() mutation) async {
     try {
       await mutation();
@@ -383,6 +449,7 @@ class _CategoryTaskScreenState extends State<CategoryTaskScreen>
       onToggle: () => _toggleTask(task),
       onDelete: () => _deleteTask(task),
       onEdit: () => _startEditingTask(task),
+      onMove: () => _moveTask(task),
     );
   }
 }

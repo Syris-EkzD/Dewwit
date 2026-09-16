@@ -85,6 +85,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       MaterialPageRoute<void>(
         builder: (context) => CategoryTaskScreen(
           category: category,
+          categoryRepository: widget.categoryRepository,
           taskRepository: widget.taskRepository,
           widgetRefresh: widget.widgetRefresh,
         ),
