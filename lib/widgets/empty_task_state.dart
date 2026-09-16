@@ -1,4 +1,4 @@
-import 'package:dewwit/theme/dewwit_design.dart';
+import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
 
 class EmptyTaskState extends StatelessWidget {
@@ -13,7 +13,7 @@ class EmptyTaskState extends StatelessWidget {
       child: Align(
         alignment: const Alignment(0, -0.10),
         child: Padding(
-          padding: const EdgeInsets.all(DewwitSpacing.xLarge),
+          padding: const EdgeInsets.all(KedisSpacing.xLarge),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -30,9 +30,9 @@ class EmptyTaskState extends StatelessWidget {
                   color: colorScheme.onPrimaryContainer,
                 ),
               ),
-              const SizedBox(height: DewwitSpacing.medium),
+              const SizedBox(height: KedisSpacing.medium),
               Text('No tasks yet', style: textTheme.titleMedium),
-              const SizedBox(height: DewwitSpacing.small),
+              const SizedBox(height: KedisSpacing.small),
               Text(
                 'Add your first task and keep today moving.',
                 textAlign: TextAlign.center,

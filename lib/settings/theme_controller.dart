@@ -1,5 +1,5 @@
-import 'package:dewwit/settings/theme_preference_store.dart';
-import 'package:dewwit/services/dewwit_widget_updater.dart';
+import 'package:kedis/settings/theme_preference_store.dart';
+import 'package:kedis/services/kedis_widget_updater.dart';
 import 'package:flutter/material.dart';
 
 class ThemeController extends ChangeNotifier {
@@ -19,6 +19,6 @@ class ThemeController extends ChangeNotifier {
     _themeMode = themeMode;
     notifyListeners();
     await _preferenceStore.save(themeMode);
-    await DewwitWidgetUpdater.syncThemeMode(themeMode);
+    await KedisWidgetUpdater.syncThemeMode(themeMode);
   }
 }

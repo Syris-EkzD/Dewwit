@@ -1,4 +1,4 @@
-package com.example.mobile_todo
+package dev.ekzd.kedis
 
 import android.content.Context
 import android.content.Intent
@@ -7,7 +7,7 @@ import android.text.style.StrikethroughSpan
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 
-class DewwitWidgetService : RemoteViewsService() {
+class KedisWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory =
         TaskViewsFactory(applicationContext)
 }
@@ -20,7 +20,7 @@ private class TaskViewsFactory(
     override fun onCreate() = Unit
 
     override fun onDataSetChanged() {
-        tasks = DewwitTaskDatabase.readTasks(context)
+        tasks = KedisTaskDatabase.readTasks(context)
     }
 
     override fun onDestroy() {
@@ -31,7 +31,7 @@ private class TaskViewsFactory(
 
     override fun getViewAt(position: Int): RemoteViews? {
         val task = tasks.getOrNull(position) ?: return null
-        val palette = DewwitWidgetTheme.resolve(context)
+        val palette = KedisWidgetTheme.resolve(context)
         val taskTitle = if (task.isCompleted) {
             SpannableString(task.title).apply {
                 setSpan(StrikethroughSpan(), 0, length, 0)
@@ -39,7 +39,7 @@ private class TaskViewsFactory(
         } else {
             task.title
         }
-        return RemoteViews(context.packageName, R.layout.dewwit_widget_task).apply {
+        return RemoteViews(context.packageName, R.layout.kedis_widget_task).apply {
             setInt(
                 R.id.widget_task_row,
                 "setBackgroundResource",
@@ -57,7 +57,7 @@ private class TaskViewsFactory(
             )
             setOnClickFillInIntent(
                 R.id.widget_task_row,
-                Intent().putExtra(DewwitWidgetProvider.EXTRA_TASK_ID, task.id),
+                Intent().putExtra(KedisWidgetProvider.EXTRA_TASK_ID, task.id),
             )
         }
     }

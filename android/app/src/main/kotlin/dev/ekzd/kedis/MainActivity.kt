@@ -1,4 +1,4 @@
-package com.example.mobile_todo
+package dev.ekzd.kedis
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -11,12 +11,12 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "refresh" -> {
-                        DewwitWidgetProvider.refreshWidgets(this)
+                        KedisWidgetProvider.refreshWidgets(this)
                         result.success(null)
                     }
                     "syncThemeMode" -> {
-                        DewwitWidgetThemePreferences.setThemeMode(this, call.arguments as? String)
-                        DewwitWidgetProvider.refreshWidgets(this)
+                        KedisWidgetThemePreferences.setThemeMode(this, call.arguments as? String)
+                        KedisWidgetProvider.refreshWidgets(this)
                         result.success(null)
                     }
                     else -> result.notImplemented()
@@ -25,6 +25,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private companion object {
+        // Retained as the existing Flutter/native protocol identifier.
         const val WIDGET_CHANNEL = "dewwit/widget"
     }
 }

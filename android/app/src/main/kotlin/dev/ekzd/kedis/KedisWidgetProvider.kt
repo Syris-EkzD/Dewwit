@@ -1,4 +1,4 @@
-package com.example.mobile_todo
+package dev.ekzd.kedis
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -11,7 +11,7 @@ import android.os.Build
 import android.widget.RemoteViews
 import java.util.concurrent.Executors
 
-class DewwitWidgetProvider : AppWidgetProvider() {
+class KedisWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -46,7 +46,7 @@ class DewwitWidgetProvider : AppWidgetProvider() {
         val pendingResult = goAsync()
         executor.execute {
             try {
-                DewwitTaskDatabase.toggleTask(context, taskId)
+                KedisTaskDatabase.toggleTask(context, taskId)
                 refreshWidgets(context)
             } finally {
                 pendingResult.finish()
@@ -55,14 +55,14 @@ class DewwitWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        const val ACTION_TOGGLE_TASK = "com.example.mobile_todo.TOGGLE_TASK"
+        const val ACTION_TOGGLE_TASK = "dev.ekzd.kedis.TOGGLE_TASK"
         const val EXTRA_TASK_ID = "task_id"
 
         private val executor = Executors.newSingleThreadExecutor()
 
         fun refreshWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
-            val component = ComponentName(context, DewwitWidgetProvider::class.java)
+            val component = ComponentName(context, KedisWidgetProvider::class.java)
             val widgetIds = manager.getAppWidgetIds(component)
             widgetIds.forEach { appWidgetId ->
                 updateWidget(context, manager, appWidgetId)
@@ -75,11 +75,11 @@ class DewwitWidgetProvider : AppWidgetProvider() {
             manager: AppWidgetManager,
             appWidgetId: Int,
         ) {
-            val serviceIntent = Intent(context, DewwitWidgetService::class.java).apply {
+            val serviceIntent = Intent(context, KedisWidgetService::class.java).apply {
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
             }
-            val toggleIntent = Intent(context, DewwitWidgetProvider::class.java).apply {
+            val toggleIntent = Intent(context, KedisWidgetProvider::class.java).apply {
                 action = ACTION_TOGGLE_TASK
             }
             val toggleFlags = PendingIntent.FLAG_UPDATE_CURRENT or
@@ -90,9 +90,9 @@ class DewwitWidgetProvider : AppWidgetProvider() {
                 }
             val openAppIntent = Intent(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            val palette = DewwitWidgetTheme.resolve(context)
+            val palette = KedisWidgetTheme.resolve(context)
 
-            val views = RemoteViews(context.packageName, R.layout.dewwit_widget).apply {
+            val views = RemoteViews(context.packageName, R.layout.kedis_widget).apply {
                 setInt(R.id.widget_root, "setBackgroundResource", palette.backgroundDrawable)
                 setRemoteAdapter(R.id.widget_task_list, serviceIntent)
                 setEmptyView(R.id.widget_task_list, R.id.widget_empty_view)

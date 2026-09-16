@@ -1,4 +1,4 @@
-import 'package:dewwit/theme/dewwit_design.dart';
+import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
 
 class EditableTaskItem extends StatefulWidget {
@@ -48,15 +48,15 @@ class _EditableTaskItemState extends State<EditableTaskItem> {
 
     return Material(
       color: colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(DewwitRadii.medium),
+      borderRadius: BorderRadius.circular(KedisRadii.medium),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         dense: true,
         visualDensity: VisualDensity.compact,
-        horizontalTitleGap: DewwitSpacing.small,
-        minLeadingWidth: DewwitSpacing.large,
+        horizontalTitleGap: KedisSpacing.small,
+        minLeadingWidth: KedisSpacing.large,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: DewwitSpacing.xSmall,
+          horizontal: KedisSpacing.xSmall,
         ),
         leading: const Checkbox(value: false, onChanged: null),
         title: TextField(

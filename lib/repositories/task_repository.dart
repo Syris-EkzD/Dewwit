@@ -1,4 +1,4 @@
-import 'package:dewwit/models/task.dart';
+import 'package:kedis/models/task.dart';
 import 'package:sqflite/sqflite.dart';
 
 class TaskRepository {
@@ -9,6 +9,7 @@ class TaskRepository {
   TaskRepository.atPath(this._databasePath, {DatabaseFactory? factory})
     : _factory = factory ?? databaseFactory;
 
+  // Retained for compatibility with the existing authoritative task store.
   static const _databaseName = 'dewwit.db';
   static const _databaseVersion = 2;
   static const _tasksTable = 'tasks';

@@ -1,10 +1,10 @@
-import 'package:dewwit/main.dart';
-import 'package:dewwit/models/task.dart';
-import 'package:dewwit/repositories/task_repository.dart';
-import 'package:dewwit/settings/theme_controller.dart';
-import 'package:dewwit/settings/theme_preference_store.dart';
-import 'package:dewwit/widgets/editable_task_item.dart';
-import 'package:dewwit/widgets/editing_task_item.dart';
+import 'package:kedis/main.dart';
+import 'package:kedis/models/task.dart';
+import 'package:kedis/repositories/task_repository.dart';
+import 'package:kedis/settings/theme_controller.dart';
+import 'package:kedis/settings/theme_preference_store.dart';
+import 'package:kedis/widgets/editable_task_item.dart';
+import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -20,9 +20,9 @@ void main() {
     themePreferenceStore = _FakeThemePreferenceStore();
   });
 
-  Future<void> pumpDewwit(WidgetTester tester) async {
+  Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
-      DewwitApp(
+      KedisApp(
         taskRepository: repository,
         themeController: ThemeController(themePreferenceStore),
         widgetRefresh: () async {
@@ -36,9 +36,9 @@ void main() {
   testWidgets('loads persisted tasks', (WidgetTester tester) async {
     await repository.createTask('Buy groceries');
 
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
-    expect(find.text('Dewwit'), findsOneWidget);
+    expect(find.text('Kedis'), findsOneWidget);
     expect(find.text('Buy groceries'), findsOneWidget);
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
   });
@@ -46,7 +46,7 @@ void main() {
   testWidgets('opens one focused inline draft and hides the Add FAB', (
     WidgetTester tester,
   ) async {
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
     expect(find.text('No tasks yet'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Add task'));
@@ -76,7 +76,7 @@ void main() {
   testWidgets('submits a valid inline draft and refreshes the checklist', (
     WidgetTester tester,
   ) async {
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '  Finish activity  ');
@@ -93,7 +93,7 @@ void main() {
   testWidgets('multiline draft grows to keep its text visible', (
     WidgetTester tester,
   ) async {
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
 
@@ -115,7 +115,7 @@ void main() {
   testWidgets('discards an empty inline draft without persistence', (
     WidgetTester tester,
   ) async {
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
     await tester.tap(find.byTooltip('Add task'));
     await tester.pumpAndSettle();
 
@@ -130,7 +130,7 @@ void main() {
 
   testWidgets('toggles and deletes a task', (WidgetTester tester) async {
     await repository.createTask('Review networking');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -151,7 +151,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final original = await repository.createTask('Original title');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.text('Original title'));
     await tester.pumpAndSettle();
@@ -179,7 +179,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await repository.createTask('Keep title');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.text('Keep title'));
     await tester.pumpAndSettle();
@@ -197,7 +197,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await repository.createTask('Unchanged title');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.text('Unchanged title'));
     await tester.pumpAndSettle();
@@ -216,7 +216,7 @@ void main() {
   ) async {
     await repository.createTask('First task');
     await repository.createTask('Second task');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.text('First task'));
     await tester.pumpAndSettle();
@@ -253,7 +253,7 @@ void main() {
       isCompleted: true,
       completedAt: newerCompletedAt,
     );
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.text('Newer completed'));
     await tester.pumpAndSettle();
@@ -280,7 +280,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final original = await repository.createTask('Restore active');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byIcon(Icons.delete_outline));
     await tester.pumpAndSettle();
@@ -320,7 +320,7 @@ void main() {
       isCompleted: true,
       completedAt: newestCompletedAt,
     );
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Delete Newest completed'));
     await tester.pumpAndSettle();
@@ -347,7 +347,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await repository.createTask('Delete permanently');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byIcon(Icons.delete_outline));
     await tester.pumpAndSettle();
@@ -364,7 +364,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await repository.createTask('Accidental completion');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -391,7 +391,7 @@ void main() {
     final task = await repository.createTask('Restore completion');
     final completed = await repository.toggleTask(task.id);
     final originalCompletedAt = completed!.completedAt;
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
@@ -415,7 +415,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final task = await repository.createTask('Changed from widget');
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await repository.toggleTask(task.id);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
@@ -435,7 +435,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2));
     await repository.toggleTask(middle.id);
 
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     expect(find.text('Completed'), findsOneWidget);
     final activeY = tester.getTopLeft(find.text('Newest active')).dy;
@@ -450,7 +450,7 @@ void main() {
   testWidgets('changes and persists theme from settings', (
     WidgetTester tester,
   ) async {
-    await pumpDewwit(tester);
+    await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();

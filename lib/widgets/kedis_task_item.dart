@@ -1,9 +1,9 @@
-import 'package:dewwit/models/task.dart';
-import 'package:dewwit/theme/dewwit_design.dart';
+import 'package:kedis/models/task.dart';
+import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
 
-class DewwitTaskItem extends StatelessWidget {
-  const DewwitTaskItem({
+class KedisTaskItem extends StatelessWidget {
+  const KedisTaskItem({
     required this.task,
     required this.onToggle,
     required this.onDelete,
@@ -23,7 +23,7 @@ class DewwitTaskItem extends StatelessWidget {
 
     return Material(
       color: colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(DewwitRadii.medium),
+      borderRadius: BorderRadius.circular(KedisRadii.medium),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         dense: true,
@@ -31,7 +31,7 @@ class DewwitTaskItem extends StatelessWidget {
         horizontalTitleGap: 8,
         minLeadingWidth: 24,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: DewwitSpacing.xSmall,
+          horizontal: KedisSpacing.xSmall,
         ),
         leading: Checkbox(
           value: task.isCompleted,

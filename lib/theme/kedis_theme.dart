@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'dewwit_design.dart';
+import 'kedis_design.dart';
 
-abstract final class DewwitTheme {
+abstract final class KedisTheme {
   static const _seedColor = Color(0xFF426A5A);
 
   static final ThemeData light = _build(Brightness.light);
@@ -29,33 +29,33 @@ abstract final class DewwitTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleSpacing: DewwitSpacing.medium,
+        titleSpacing: KedisSpacing.medium,
       ),
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.medium),
+          borderRadius: BorderRadius.circular(KedisRadii.medium),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: DewwitSpacing.medium,
-          vertical: DewwitSpacing.medium,
+          horizontal: KedisSpacing.medium,
+          vertical: KedisSpacing.medium,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.small),
+          borderRadius: BorderRadius.circular(KedisRadii.small),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.small),
+          borderRadius: BorderRadius.circular(KedisRadii.small),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.small),
+          borderRadius: BorderRadius.circular(KedisRadii.small),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
@@ -64,17 +64,17 @@ abstract final class DewwitTheme {
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(
-            horizontal: DewwitSpacing.large,
-            vertical: DewwitSpacing.medium,
+            horizontal: KedisSpacing.large,
+            vertical: KedisSpacing.medium,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(DewwitRadii.small),
+            borderRadius: BorderRadius.circular(KedisRadii.small),
           ),
         ),
       ),
       checkboxTheme: CheckboxThemeData(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DewwitSpacing.xSmall),
+          borderRadius: BorderRadius.circular(KedisSpacing.xSmall),
         ),
         side: BorderSide(color: colorScheme.outline, width: 1.5),
         fillColor: WidgetStateProperty.resolveWith(
@@ -92,14 +92,14 @@ abstract final class DewwitTheme {
         hoverElevation: 3,
         highlightElevation: 4,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.medium),
+          borderRadius: BorderRadius.circular(KedisRadii.medium),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: colorScheme.surfaceContainerHigh,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DewwitRadii.large),
+          borderRadius: BorderRadius.circular(KedisRadii.large),
         ),
       ),
     );

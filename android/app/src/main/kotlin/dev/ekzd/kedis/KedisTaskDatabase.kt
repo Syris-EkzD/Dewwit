@@ -1,4 +1,4 @@
-package com.example.mobile_todo
+package dev.ekzd.kedis
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -10,7 +10,7 @@ data class WidgetTask(
     val isCompleted: Boolean,
 )
 
-object DewwitTaskDatabase {
+object KedisTaskDatabase {
     fun readTasks(context: Context): List<WidgetTask> =
         Helper(context).use { helper ->
             helper.readableDatabase.query(
@@ -83,6 +83,7 @@ object DewwitTaskDatabase {
         }
     }
 
+    // Public product identity changed, but the authoritative database filename did not.
     private const val DATABASE_NAME = "dewwit.db"
     private const val DATABASE_VERSION = 2
     private const val TASKS_TABLE = "tasks"
