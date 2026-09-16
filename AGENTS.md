@@ -1,85 +1,102 @@
-# Dewwit — Agent Instructions
+# Kedis — Agent Instructions
 
-## Project Overview
+## Project overview
 
-Dewwit is a lightweight Android checklist application built with Flutter.
+Kedis by EkzD.dev is a local-first Android task manager built with Flutter. It is the renamed continuation of the existing Dewwit application.
 
-Its primary purpose is to provide a fast and convenient personal to-do list, with particular emphasis on an Android home-screen widget.
+The current codebase already provides a working checklist, local SQLite persistence, Android home-screen widget interaction, theme/settings behavior, and app/widget synchronization. Kedis V1 will later add categories, acknowledgement, stale-task detection, and restrained reminder notifications.
 
-The project should remain simple, maintainable, and offline-first.
-
----
-
-## Current Development Target
-
-Only implement features that belong to Dewwit V1 unless explicitly instructed otherwise.
-
-### Dewwit V1
-
-V1 must allow the user to:
-
-* Create a task.
-* View tasks as checklist items.
-* Check and uncheck tasks.
-* Delete tasks.
-* Keep tasks after closing and reopening the application.
-* Add a Dewwit widget to the Android home screen.
-* View current checklist items from the widget.
-* Complete tasks from the widget where technically practical.
+Reliability, maintainability, and ease of use take priority over feature quantity.
 
 ---
 
-## Out of Scope
+## Product-state rule
 
-Do not implement the following unless explicitly requested:
+Always distinguish between:
 
-* User accounts
-* Google Sign-In
-* Google Calendar integration
-* Cloud synchronization
-* Backend APIs
-* Notifications
-* Reminders
-* Recurring tasks
-* Categories
-* Tags
-* Priorities
-* Collaboration
-* Web application
-* iOS support
+1. **Implemented foundation** — behavior that exists and must be preserved.
+2. **Planned Kedis V1** — approved direction that has not yet been implemented.
+3. **Outside Kedis V1** — ideas that must not influence current architecture unless separately approved.
 
-Future requirements belong in `docs/BACKLOG.md`.
-
-Do not implement backlog items simply because the architecture could support them.
+Do not claim a planned feature works merely because it is documented.
 
 ---
 
-## Engineering Principles
+## Implemented foundation
 
-1. Prefer the simplest solution that satisfies the current requirements.
-2. Avoid premature abstraction.
-3. Avoid speculative architecture for features that do not exist yet.
-4. Introduce dependencies only when they solve a concrete problem.
-5. Keep business logic separate from presentation where doing so improves maintainability.
-6. Keep files and classes reasonably small and focused.
-7. Prefer clear names over clever names.
-8. Preserve Android as the primary target.
-9. Keep Dewwit usable without an internet connection.
+Unless a task explicitly changes this behavior, preserve:
+
+- Task creation and display.
+- Inline task-title editing.
+- Completion and uncompletion.
+- Deletion.
+- Existing undo behavior.
+- Current active/completed ordering.
+- SQLite persistence.
+- Android home-screen widget display and task completion interaction.
+- Shared application/widget task state.
+- Widget refresh after Flutter-side mutations.
+- Task reload when the application resumes.
+- System, Light, and Dark application appearance.
+- Native widget appearance mirroring.
+
+---
+
+## Planned Kedis V1
+
+The following are product goals, not currently implemented behavior:
+
+- User-created, color-coded categories.
+- Safe category rename/deletion flows.
+- Category-aware task capture and a lightweight Inbox/default location.
+- Task acknowledgement separate from completion.
+- Stale-task detection derived from acknowledgement or meaningful activity.
+- Restrained local notifications that resurface stale tasks.
+
+Implement these only through an explicit future task. Do not add their database fields, dependencies, services, or architectural layers speculatively.
+
+---
+
+## Outside Kedis V1
+
+Do not implement or design around budget/finance features, AI/LLM features, cloud sync, user accounts, Google Sign-In, Google Calendar, collaboration, web functionality, iOS-specific functionality, recurring tasks, complex priorities, tags, subtasks, or mandatory due dates unless product scope is explicitly changed.
+
+---
+
+## Compatibility boundaries
+
+Some internal values intentionally retain the former Dewwit name. Do not treat these as missed search-and-replace results:
+
+- SQLite database filename: `dewwit.db`
+- Flutter/native widget platform channel: `dewwit/widget`
+- Native widget theme preference store: `dewwit_widget_preferences`
+
+These values are compatibility details, not public branding. Renaming them requires a deliberate migration task.
+
+Current public/project identity:
+
+- Flutter package: `kedis`
+- Android namespace/application ID: `dev.ekzd.kedis`
+- Product label: `Kedis`
+
+The repository may still contain generated, inactive non-Android platform scaffolding. Android is the current product target; do not broaden an Android task into desktop, web, or iOS work without a concrete requirement.
+
+---
+
+## Engineering principles
+
+1. Prefer the smallest clear solution that satisfies the active requirement.
+2. Do not rewrite working code without a concrete reason.
+3. Avoid premature abstraction and speculative architecture.
+4. Introduce dependencies only when they solve an implemented requirement.
+5. Keep Flutter/native boundaries explicit.
+6. Keep the SQLite task store authoritative; do not create duplicate task state.
+7. Keep files and classes reasonably small and focused.
+8. Preserve comments that explain non-obvious synchronization or compatibility behavior.
+9. Do not suppress failures merely to make checks pass.
 10. Do not silently expand product scope.
-
----
-
-## Existing Code
-
-The repository may contain prototype Flutter code created while learning Flutter.
-
-Before modifying existing code:
-
-1. Inspect the repository.
-2. Identify what is still useful.
-3. Remove obsolete prototype code only when appropriate.
-4. Do not rewrite working code without a reason.
-5. Preserve a runnable application throughout refactoring whenever practical.
+11. Keep task capture and common interactions lightweight.
+12. Prefer boring, understandable code over clever code.
 
 ---
 
@@ -87,85 +104,54 @@ Before modifying existing code:
 
 For substantial work:
 
-1. Read this file.
-2. Read the relevant files under `docs/`.
-3. Inspect the existing implementation.
-4. Explain the intended approach before making major architectural changes.
-5. Implement only the requested scope.
-6. Validate the result.
-7. Summarize what changed.
+1. Read this file and the relevant documents under `docs/`.
+2. Inspect the implementation before changing behavior.
+3. Identify Flutter, Android widget, persistence, resource, and test dependencies affected by the task.
+4. Make the smallest coherent change.
+5. Update tests without deleting meaningful coverage to accommodate implementation changes.
+6. Run all applicable validation.
+7. Search for stale references when a rename or migration is involved and classify intentional compatibility values instead of blindly replacing them.
+8. Report exactly what changed and what could not be verified.
 
-For small and obvious changes, implementation may proceed directly.
+Do not use blind repository-wide search-and-replace for identity changes that touch persistence, Android packages, platform channels, resources, or widgets.
 
 ---
 
 ## Validation
 
-After modifying Flutter or Dart code, run where applicable:
+For changes affecting Flutter, Dart, Android identity, or the native widget, run where applicable:
 
 ```bash
-dart format .
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
+flutter build apk --debug
+git diff --check
 ```
 
-If tests do not exist for the affected functionality, state that clearly.
+Also inspect Android package/resource references and search relevant files for stale product identifiers.
 
-Do not claim validation succeeded unless the command was actually run successfully.
-
----
-
-## Dependencies
-
-Before adding a new package:
-
-* Explain what problem the dependency solves.
-* Prefer established and actively maintained packages.
-* Avoid adding a package when the same requirement can be reasonably implemented with existing dependencies or platform functionality.
-* Do not add backend, authentication, cloud, analytics, or telemetry dependencies during V1 unless explicitly requested.
+If the environment supports runtime testing, smoke-check application launch, task creation, completion, editing, Settings, and the Android widget. Never claim a command or manual check succeeded unless it was actually performed.
 
 ---
 
-## Git Practices
+## Git practices
 
-Keep changes focused.
+Keep commits focused and do not commit generated build output, secrets, credentials, or unrelated refactors.
 
-Do not:
-
-* Modify unrelated files.
-* Commit generated build output.
-* Commit secrets or credentials.
-* Make unrelated refactors while implementing a feature.
-
-Prefer commits that represent one logical change.
-
-Recommended examples:
+Use Conventional Commit style where practical, for example:
 
 ```text
-chore: prepare Dewwit project structure
-feat: add local task persistence
-feat: implement checklist interface
-feat: add Android home screen widget
-fix: synchronize widget task state
+feat: add category management
+fix(widget): refresh stale task state
+refactor: clarify acknowledgement flow
+chore: rename Dewwit to Kedis
 ```
 
 ---
 
-## Documentation
+## Documentation authority
 
-Update project documentation when a change affects:
+`docs/PRODUCT.md` defines current product scope. `docs/ARCHITECTURE.md` describes implemented technical boundaries. `docs/BACKLOG.md` distinguishes implemented behavior, planned Kedis V1 work, and later ideas.
 
-* Product scope
-* Architecture
-* Setup instructions
-* Important technical decisions
-
-Do not allow the implementation and documentation to contradict each other.
-
----
-
-## Product Authority
-
-The documentation defines the current agreed product direction.
-
-AI agents may recommend alternatives and identify problems, but should not independently change product scope or architectural direction without clearly explaining the proposed change first.
+Agents may identify risks and recommend changes, but must not silently turn planned behavior into implemented scope or design architecture for excluded features.

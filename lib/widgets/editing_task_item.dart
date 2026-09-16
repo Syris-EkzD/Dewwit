@@ -1,5 +1,5 @@
-import 'package:dewwit/models/task.dart';
-import 'package:dewwit/theme/dewwit_design.dart';
+import 'package:kedis/models/task.dart';
+import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
 
 class EditingTaskItem extends StatelessWidget {
@@ -24,14 +24,14 @@ class EditingTaskItem extends StatelessWidget {
 
     return Material(
       color: colorScheme.primaryContainer.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(DewwitRadii.medium),
+      borderRadius: BorderRadius.circular(KedisRadii.medium),
       clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.only(
-          left: DewwitSpacing.small,
-          right: DewwitSpacing.xSmall,
-          top: DewwitSpacing.xSmall,
-          bottom: DewwitSpacing.xSmall,
+          left: KedisSpacing.small,
+          right: KedisSpacing.xSmall,
+          top: KedisSpacing.xSmall,
+          bottom: KedisSpacing.xSmall,
         ),
         leading: Checkbox(value: task.isCompleted, onChanged: null),
         title: TextField(

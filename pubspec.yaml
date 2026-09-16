@@ -1,5 +1,5 @@
-name: dewwit
-description: "A lightweight Android checklist application."
+name: kedis
+description: "A lightweight Android task manager by EkzD.dev."
 publish_to: 'none'
 
 version: 1.0.0+1

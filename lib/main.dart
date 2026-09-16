@@ -1,17 +1,17 @@
 import 'dart:async';
 
-import 'package:dewwit/models/task.dart';
-import 'package:dewwit/repositories/task_repository.dart';
-import 'package:dewwit/settings/settings_screen.dart';
-import 'package:dewwit/settings/theme_controller.dart';
-import 'package:dewwit/settings/theme_preference_store.dart';
-import 'package:dewwit/services/dewwit_widget_updater.dart';
-import 'package:dewwit/theme/dewwit_design.dart';
-import 'package:dewwit/theme/dewwit_theme.dart';
-import 'package:dewwit/widgets/dewwit_task_item.dart';
-import 'package:dewwit/widgets/editable_task_item.dart';
-import 'package:dewwit/widgets/editing_task_item.dart';
-import 'package:dewwit/widgets/empty_task_state.dart';
+import 'package:kedis/models/task.dart';
+import 'package:kedis/repositories/task_repository.dart';
+import 'package:kedis/settings/settings_screen.dart';
+import 'package:kedis/settings/theme_controller.dart';
+import 'package:kedis/settings/theme_preference_store.dart';
+import 'package:kedis/services/kedis_widget_updater.dart';
+import 'package:kedis/theme/kedis_design.dart';
+import 'package:kedis/theme/kedis_theme.dart';
+import 'package:kedis/widgets/editable_task_item.dart';
+import 'package:kedis/widgets/editing_task_item.dart';
+import 'package:kedis/widgets/empty_task_state.dart';
+import 'package:kedis/widgets/kedis_task_item.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
@@ -20,7 +20,7 @@ Future<void> main() async {
   final initialThemeMode = await preferenceStore.load();
 
   runApp(
-    DewwitApp(
+    KedisApp(
       taskRepository: TaskRepository(),
       themeController: ThemeController(
         preferenceStore,
@@ -28,14 +28,14 @@ Future<void> main() async {
       ),
     ),
   );
-  unawaited(DewwitWidgetUpdater.syncThemeMode(initialThemeMode));
+  unawaited(KedisWidgetUpdater.syncThemeMode(initialThemeMode));
 }
 
-class DewwitApp extends StatefulWidget {
-  const DewwitApp({
+class KedisApp extends StatefulWidget {
+  const KedisApp({
     required this.taskRepository,
     required this.themeController,
-    this.widgetRefresh = DewwitWidgetUpdater.refresh,
+    this.widgetRefresh = KedisWidgetUpdater.refresh,
     super.key,
   });
 
@@ -44,10 +44,10 @@ class DewwitApp extends StatefulWidget {
   final Future<void> Function() widgetRefresh;
 
   @override
-  State<DewwitApp> createState() => _DewwitAppState();
+  State<KedisApp> createState() => _KedisAppState();
 }
 
-class _DewwitAppState extends State<DewwitApp> {
+class _KedisAppState extends State<KedisApp> {
   @override
   void initState() {
     super.initState();
@@ -55,7 +55,7 @@ class _DewwitAppState extends State<DewwitApp> {
   }
 
   @override
-  void didUpdateWidget(DewwitApp oldWidget) {
+  void didUpdateWidget(KedisApp oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.themeController != widget.themeController) {
       oldWidget.themeController.removeListener(_themeChanged);
@@ -75,11 +75,11 @@ class _DewwitAppState extends State<DewwitApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Dewwit',
-      theme: DewwitTheme.light,
-      darkTheme: DewwitTheme.dark,
+      title: 'Kedis',
+      theme: KedisTheme.light,
+      darkTheme: KedisTheme.dark,
       themeMode: widget.themeController.themeMode,
-      home: DewwitHomePage(
+      home: KedisHomePage(
         taskRepository: widget.taskRepository,
         themeController: widget.themeController,
         widgetRefresh: widget.widgetRefresh,
@@ -88,8 +88,8 @@ class _DewwitAppState extends State<DewwitApp> {
   }
 }
 
-class DewwitHomePage extends StatefulWidget {
-  const DewwitHomePage({
+class KedisHomePage extends StatefulWidget {
+  const KedisHomePage({
     required this.taskRepository,
     required this.themeController,
     required this.widgetRefresh,
@@ -101,10 +101,10 @@ class DewwitHomePage extends StatefulWidget {
   final Future<void> Function() widgetRefresh;
 
   @override
-  State<DewwitHomePage> createState() => _DewwitHomePageState();
+  State<KedisHomePage> createState() => _KedisHomePageState();
 }
 
-class _DewwitHomePageState extends State<DewwitHomePage>
+class _KedisHomePageState extends State<KedisHomePage>
     with WidgetsBindingObserver {
   List<Task> _tasks = const [];
   bool _isLoading = true;
@@ -353,7 +353,7 @@ class _DewwitHomePageState extends State<DewwitHomePage>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Dewwit',
+              'Kedis',
               style: Theme.of(context).textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
             ),
@@ -367,7 +367,7 @@ class _DewwitHomePageState extends State<DewwitHomePage>
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: DewwitSpacing.small),
+            padding: const EdgeInsets.only(right: KedisSpacing.small),
             child: IconButton(
               onPressed: () => Navigator.push(
                 context,
@@ -435,8 +435,8 @@ class _DewwitHomePageState extends State<DewwitHomePage>
       if (completedTasks.isNotEmpty) ...[
         Padding(
           padding: const EdgeInsets.only(
-            top: DewwitSpacing.small,
-            left: DewwitSpacing.xSmall,
+            top: KedisSpacing.small,
+            left: KedisSpacing.xSmall,
           ),
           child: Text(
             'Completed',
@@ -452,9 +452,9 @@ class _DewwitHomePageState extends State<DewwitHomePage>
 
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(
-        DewwitSpacing.medium,
-        DewwitSpacing.xSmall,
-        DewwitSpacing.medium,
+        KedisSpacing.medium,
+        KedisSpacing.xSmall,
+        KedisSpacing.medium,
         104,
       ),
       itemCount: items.length,
@@ -475,7 +475,7 @@ class _DewwitHomePageState extends State<DewwitHomePage>
       );
     }
 
-    return DewwitTaskItem(
+    return KedisTaskItem(
       key: ValueKey(task.id),
       task: task,
       onToggle: () => _toggleTask(task),

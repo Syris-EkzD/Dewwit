@@ -32,7 +32,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <receiver
-            android:name=".DewwitWidgetProvider"
+            android:name=".KedisWidgetProvider"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -40,10 +40,10 @@
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/dewwit_widget_info" />
+                android:resource="@xml/kedis_widget_info" />
         </receiver>
         <service
-            android:name=".DewwitWidgetService"
+            android:name=".KedisWidgetService"
             android:exported="false"
             android:permission="android.permission.BIND_REMOTEVIEWS" />
     </application>

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dewwit/repositories/task_repository.dart';
+import 'package:kedis/repositories/task_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -152,7 +152,7 @@ void main() {
 
   test('keeps tasks after reopening the database', () async {
     final temporaryDirectory = await Directory.systemTemp.createTemp(
-      'dewwit_test_',
+      'kedis_test_',
     );
     final databasePath = '${temporaryDirectory.path}/dewwit.db';
     final firstRepository = TaskRepository.atPath(
@@ -198,7 +198,7 @@ void main() {
     'migrates version 1 tasks and orders legacy completions safely',
     () async {
       final temporaryDirectory = await Directory.systemTemp.createTemp(
-        'dewwit_migration_test_',
+        'kedis_migration_test_',
       );
       final databasePath = '${temporaryDirectory.path}/dewwit.db';
       final oldDatabase = await databaseFactoryFfi.openDatabase(

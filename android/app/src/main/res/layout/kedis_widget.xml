@@ -3,7 +3,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/dewwit_widget_background_light"
+    android:background="@drawable/kedis_widget_background_light"
     android:padding="12dp">
 
     <ListView
@@ -21,7 +21,7 @@
         android:layout_height="match_parent"
         android:gravity="center"
         android:text="@string/widget_empty"
-        android:textColor="@color/dewwit_widget_light_on_surface_variant"
+        android:textColor="@color/kedis_widget_light_on_surface_variant"
         android:textSize="14sp" />
 
     <ImageButton
@@ -29,10 +29,10 @@
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:layout_gravity="end|bottom"
-        android:background="@drawable/dewwit_widget_action_background_light"
+        android:background="@drawable/kedis_widget_action_background_light"
         android:contentDescription="@string/widget_open_app"
         android:padding="10dp"
-        android:src="@drawable/dewwit_widget_open_app"
-        android:tint="@color/dewwit_widget_light_on_primary_container" />
+        android:src="@drawable/kedis_widget_open_app"
+        android:tint="@color/kedis_widget_light_on_primary_container" />
 
 </FrameLayout>

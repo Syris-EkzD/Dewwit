@@ -1,41 +1,35 @@
-# Dewwit Architecture
+# Kedis Architecture
 
-## Architecture Status
+## Architecture status
 
-This document describes the implemented Dewwit architecture. V1 is complete
-and has been manually validated on a real Android device. V1.1 adds Flutter
-application theme and settings foundations and synchronizes the selected
-appearance with the native Android widget without changing task storage.
+This document describes the architecture that is implemented today. Kedis currently provides the reliable local checklist and Android widget foundation inherited from Dewwit.
+
+Custom categories, task acknowledgement, stale-task calculations, and local reminder scheduling are planned Kedis V1 work but are **not implemented yet**. Their future requirements do not justify a feature-module refactor, new schema fields, or notification infrastructure during the product rename.
 
 ---
 
-# System Overview
+# System overview
 
-Dewwit is an offline-first Flutter Android application.
-
-No backend is required for V1.
-
-High-level structure:
+Kedis is a local-first Flutter Android application with a native Android home-screen widget.
 
 ```text
 ┌─────────────────────────┐
 │       Flutter UI        │
 │                         │
-│  Checklist / Task Input │
+│ Checklist / Task Input  │
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│      Task Logic         │
+│     TaskRepository      │
 │                         │
-│ Create / Toggle / Delete│
+│ CRUD / completion state │
 └────────────┬────────────┘
              │
              ▼
 ┌─────────────────────────┐
-│     Local Storage       │
-│                         │
-│ Persistent Task Data    │
+│       SQLite DB         │
+│       dewwit.db         │
 └────────────┬────────────┘
              │
        ┌─────┴─────┐
@@ -45,38 +39,31 @@ High-level structure:
 └───────────┘ └──────────────┘
 ```
 
----
-
-# Platform
-
-Primary platform:
-
-```text
-Android
-```
-
-Application framework:
-
-```text
-Flutter
-```
-
-Programming language:
-
-```text
-Dart
-```
-
-Android-specific Kotlin code implements the home-screen widget and its SQLite
-access.
+There is one authoritative task store. The Flutter application and native widget must not maintain competing copies of task state.
 
 ---
 
-# Core Domain Model
+# Platform and identity
 
-V1 requires a minimal Task model.
+Primary platform: Android
 
-Implemented model:
+Application framework: Flutter
+
+Application language: Dart
+
+Native widget language: Kotlin
+
+Flutter package name: `kedis`
+
+Android namespace/application ID: `dev.ekzd.kedis`
+
+Android-specific Kotlin code implements the home-screen widget, direct widget task completion, native widget theming, and direct access to the same SQLite database used by Flutter.
+
+---
+
+# Current domain model
+
+The implemented Task model remains intentionally small:
 
 ```text
 Task
@@ -87,79 +74,75 @@ Task
 └── completedAt: DateTime?
 ```
 
-Additional fields should only be introduced when required by an implemented feature.
+No category ID, acknowledgement timestamp, stale flag, due date, notification metadata, or other future field exists yet.
 
-Do not add fields for hypothetical future functionality.
-
----
-
-# Presentation Layer
-
-The Flutter application is responsible for:
-
-* Displaying tasks.
-* Accepting task input.
-* Displaying task completion state.
-* Receiving user interaction.
-* Presenting deletion controls.
-
-V1 should remain small enough that complex state-management frameworks are unnecessary unless a concrete requirement emerges.
+Additional domain fields should be introduced only when the corresponding Kedis V1 feature is deliberately implemented and its migration behavior has been designed.
 
 ---
 
-# Task Logic
+# Flutter presentation and task flow
 
-Task operations include:
+The Flutter application currently handles:
+
+- Loading and displaying tasks.
+- Inline task capture.
+- Inline task-title editing.
+- Completion and uncompletion.
+- Deletion and supported undo flows.
+- Active/completed presentation and ordering.
+- Settings navigation.
+- Lifecycle-driven task reload when the app resumes.
+
+`TaskRepository` separates SQLite persistence from Flutter UI code. The current scale does not justify a larger state-management or feature-module framework.
+
+Task mutations follow the existing flow:
 
 ```text
-createTask()
-getTasks()
-updateTaskTitle()
-toggleTask()
-deleteTask()
+User action
+    │
+    ▼
+TaskRepository mutation
+    │
+    ▼
+Native widget refresh request
+    │
+    ▼
+Reload tasks into Flutter UI
 ```
 
-UI code should not need to understand storage implementation details.
+Do not add architectural layers solely to prepare for hypothetical later functionality.
 
-A lightweight `TaskRepository` separates SQLite persistence from the Flutter
-UI.
+---
 
-Avoid creating multiple architectural layers purely for architectural appearance.
+# Application settings and theme
 
-## Application Settings and Theme
+Flutter's `ThemeData`, `ColorScheme`, and `ThemeMode` provide System, Light, and Dark appearance from centralized definitions under `lib/theme`.
 
-Flutter's standard `ThemeData`, `ColorScheme`, and `ThemeMode` APIs provide a
-single theme-aware widget tree for system, light, and dark appearance. Light
-and dark theme definitions are centralized under `lib/theme`.
+A small `ThemeController` owns the active mode. `ThemePreferenceStore` persists the Flutter preference using `shared_preferences`.
 
-A small `ThemeController` owns the active theme mode independently of the
-Settings UI. The stable values `system`, `light`, and `dark` are stored with
-`shared_preferences`; missing or invalid values resolve to system mode. These
-preferences are separate from the authoritative SQLite task database.
+The native Android widget cannot consume Flutter `ThemeData` directly. Kedis therefore mirrors only the stable `system`, `light`, or `dark` mode through the existing platform channel and stores it in a widget-owned Android preference before refreshing installed widgets.
 
-The Settings screen is composed from simple settings sections and items so
-new application preferences can be added without changing its overall
-structure.
+The platform channel identifier remains `dewwit/widget` intentionally. It is an internal protocol key rather than public branding, and changing both sides provides no user benefit during this rename.
 
-The native Android widget cannot read Flutter's `ThemeData`. After the app
-loads or changes its selected theme, a platform channel explicitly mirrors
-only the stable `system`, `light`, or `dark` value into a widget-owned native
-preference and refreshes installed widgets. This avoids depending on the
-internal storage format of the Flutter `shared_preferences` plugin. Flutter's
-theme selection remains the user-facing source of truth, and task data remains
-exclusively in the shared SQLite database.
+The native preference store name remains `dewwit_widget_preferences` for the same compatibility reason. Public classes, resources, logs, and labels use Kedis names.
 
 ---
 
 # Persistence
 
-Dewwit uses a local SQLite database as the authoritative task store.
+SQLite is the authoritative task store.
 
-The Flutter application accesses SQLite through `sqflite`. The native Android
-home-screen widget accesses the same database so that the application and
-widget do not maintain separate task state.
+Flutter accesses SQLite through `sqflite`. The native Android widget opens the same database through Android SQLite APIs.
 
-V1 uses one `tasks` table:
+The database filename remains:
+
+```text
+dewwit.db
+```
+
+This is an intentional compatibility value. The product rename does not rename or migrate the database.
+
+Current schema version: 2
 
 ```text
 tasks
@@ -170,104 +153,90 @@ tasks
 └── completed_at INTEGER NULL
 ```
 
-Completion is stored as `0` or `1`, and creation time is stored as UTC epoch
-milliseconds. Completion time is also stored as UTC epoch milliseconds and is
-cleared when a task returns to active. Schema version 2 adds the nullable
-`completed_at` column without rewriting existing rows. Active tasks retain
-creation order; completed tasks follow in reverse completion order. Legacy
-completed rows with no timestamp follow timestamped completions in creation
-and ID order.
+Completion is stored as `0` or `1`. Creation and completion timestamps use epoch milliseconds. `completed_at` is cleared when a task returns to active.
 
-No remote database is required for V1.
+Current ordering is shared conceptually by Flutter and the widget:
 
----
+1. Active tasks first, in creation/ID order.
+2. Completed tasks after active tasks, newest completion first.
+3. Legacy completed rows without `completed_at` follow timestamped completions safely.
 
-# Android Home-Screen Widget
-
-The widget is part of the core system architecture.
-
-The Flutter application and native Android widget cannot be treated as completely independent sources of task state.
-
-There should be one authoritative task state with a reliable mechanism for making relevant data available to the widget.
-
-Conceptual flow:
-
-```text
-User modifies task in Flutter
-          │
-          ▼
-Update local task state
-          │
-          ▼
-Request widget refresh
-          │
-          ▼
-Android widget displays new state
-```
-
-Widget interaction:
-
-```text
-User checks task in widget
-          │
-          ▼
-Update task state
-          │
-          ▼
-Persist change
-          │
-          ▼
-Refresh widget
-          │
-          ▼
-Flutter application reads updated state
-```
-
-The V1 widget uses Android's native `AppWidgetProvider`, `RemoteViewsService`,
-and `RemoteViews` APIs. Its collection adapter reads the same `dewwit.db`
-SQLite database used by `sqflite`; it does not keep a second task store.
-
-Task taps send an explicit broadcast to the widget provider. The provider
-toggles the matching SQLite row and invalidates the widget collection. After a
-Flutter-side mutation, a small platform channel asks Android to perform the
-same collection refresh. The Flutter application reloads tasks when it resumes
-so changes made from the home screen are visible when the application opens.
+The product rename must not change this schema or ordering behavior.
 
 ---
 
-# Networking
+# Android home-screen widget
 
-Dewwit V1 requires no network connection.
+The native widget uses `AppWidgetProvider`, `RemoteViewsService`, and `RemoteViews`.
+
+Application-side flow:
 
 ```text
-Internet → Not required
-Backend  → None
-API      → None
-Cloud DB → None
+Flutter changes a task
+        │
+        ▼
+SQLite is updated
+        │
+        ▼
+Platform channel requests widget refresh
+        │
+        ▼
+Native widget rereads dewwit.db
 ```
+
+Widget-side completion flow:
+
+```text
+User taps widget task
+        │
+        ▼
+Explicit broadcast to KedisWidgetProvider
+        │
+        ▼
+KedisTaskDatabase updates dewwit.db
+        │
+        ▼
+Widget collection refreshes
+        │
+        ▼
+Flutter rereads data when app resumes
+```
+
+The widget broadcast action uses the current Android identity: `dev.ekzd.kedis.TOGGLE_TASK`.
 
 ---
 
-# Authentication
+# Planned Kedis V1 architecture work
 
-None.
+Categories, acknowledgement, stale-task derivation, and local reminders will require a separate architecture/implementation task. That future work should decide, based on concrete requirements:
+
+- Category persistence and safe deletion semantics.
+- How uncategorized/Inbox tasks are represented.
+- Which task interactions update acknowledgement/activity timestamps.
+- How staleness thresholds are calculated without treating stale state as a permanent flag.
+- How local notifications are scheduled, summarized, throttled, and cancelled.
+- How the native widget exposes categories without duplicating application state.
+
+None of those decisions are implemented by the product rename.
+
+---
+
+# Networking and authentication
+
+Current Kedis task management requires no backend, remote API, user account, or network connection.
+
+Cloud synchronization, authentication, Google integrations, collaboration, and AI functionality are outside Kedis V1 scope.
 
 ---
 
 # Security
 
-V1 stores only ordinary personal checklist information locally.
-
-No passwords, API keys, authentication tokens, or remote credentials should exist in the application.
+Current data is ordinary local task and appearance-preference information. No passwords, API keys, remote credentials, or authentication tokens should exist in the application.
 
 Secrets must never be committed to the repository.
 
 ---
 
-# Architectural Principle
+# Architectural principle
 
-Dewwit should remain proportional to its actual complexity.
-
-The architecture should make V1 easy to understand and maintain without building infrastructure solely for hypothetical future functionality.
-
-Future requirements may justify architectural changes when those requirements actually become part of the product.
+Keep Kedis proportional to what is actually implemented. Prefer explicit Flutter/native boundaries, one authoritative task store, small focused files, and understandable code over speculative abstractions.

@@ -1,5 +1,5 @@
-import 'package:dewwit/settings/theme_controller.dart';
-import 'package:dewwit/theme/dewwit_design.dart';
+import 'package:kedis/settings/theme_controller.dart';
+import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
 
 const _itemVerticalPadding = 14.0;
@@ -17,10 +17,10 @@ class SettingsScreen extends StatelessWidget {
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
-            DewwitSpacing.medium,
-            DewwitSpacing.small,
-            DewwitSpacing.medium,
-            DewwitSpacing.large,
+            KedisSpacing.medium,
+            KedisSpacing.small,
+            KedisSpacing.medium,
+            KedisSpacing.large,
           ),
           children: [
             SettingsSection(
@@ -31,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
                   builder: (context, _) => SettingsItem(
                     icon: Icons.palette_outlined,
                     title: 'Theme',
-                    description: 'Choose how Dewwit looks',
+                    description: 'Choose how Kedis looks',
                     value: _themeModeLabel(themeController.themeMode),
                     onTap: () => _showThemeDialog(context),
                   ),
@@ -88,15 +88,15 @@ class SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: DewwitSpacing.medium),
+      padding: const EdgeInsets.only(top: KedisSpacing.medium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.only(
-              left: DewwitSpacing.xSmall,
-              right: DewwitSpacing.xSmall,
-              bottom: DewwitSpacing.small,
+              left: KedisSpacing.xSmall,
+              right: KedisSpacing.xSmall,
+              bottom: KedisSpacing.small,
             ),
             child: Text(
               title,
@@ -138,7 +138,7 @@ class SettingsItem extends StatelessWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: DewwitSpacing.medium,
+        horizontal: KedisSpacing.medium,
         vertical: _itemVerticalPadding,
       ),
       leading: Container(
@@ -146,7 +146,7 @@ class SettingsItem extends StatelessWidget {
         height: _itemIconSize,
         decoration: BoxDecoration(
           color: colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(DewwitRadii.small),
+          borderRadius: BorderRadius.circular(KedisRadii.small),
         ),
         child: Icon(icon, color: colorScheme.onSecondaryContainer),
       ),
@@ -154,7 +154,7 @@ class SettingsItem extends StatelessWidget {
       subtitle: description == null
           ? null
           : Padding(
-              padding: const EdgeInsets.only(top: DewwitSpacing.xSmall),
+              padding: const EdgeInsets.only(top: KedisSpacing.xSmall),
               child: Text(
                 description!,
                 style: Theme.of(context).textTheme.bodyMedium
@@ -169,7 +169,7 @@ class SettingsItem extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: colorScheme.primary),
           ),
-          const SizedBox(width: DewwitSpacing.xSmall),
+          const SizedBox(width: KedisSpacing.xSmall),
           Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
         ],
       ),
