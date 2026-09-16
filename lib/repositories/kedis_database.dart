@@ -124,35 +124,33 @@ class KedisDatabase {
     ''');
   }
 
-  static Future<void> _migrateToCategories(Database database) async {
-    await database.transaction((transaction) async {
-      await _createCategoriesTable(transaction);
-      final inboxId = await _insertInbox(transaction);
+  static Future<void> _migrateToCategories(DatabaseExecutor database) async {
+    await _createCategoriesTable(database);
+    final inboxId = await _insertInbox(database);
 
-      await transaction.execute('ALTER TABLE $tasksTable RENAME TO tasks_v2');
-      await _createTasksTable(transaction);
-      await transaction.rawInsert(
-        '''
-        INSERT INTO $tasksTable (
-          id,
-          title,
-          is_completed,
-          created_at,
-          completed_at,
-          category_id
-        )
-        SELECT
-          id,
-          title,
-          is_completed,
-          created_at,
-          completed_at,
-          ?
-        FROM tasks_v2
-        ''',
-        [inboxId],
-      );
-      await transaction.execute('DROP TABLE tasks_v2');
-    });
+    await database.execute('ALTER TABLE $tasksTable RENAME TO tasks_v2');
+    await _createTasksTable(database);
+    await database.rawInsert(
+      '''
+      INSERT INTO $tasksTable (
+        id,
+        title,
+        is_completed,
+        created_at,
+        completed_at,
+        category_id
+      )
+      SELECT
+        id,
+        title,
+        is_completed,
+        created_at,
+        completed_at,
+        ?
+      FROM tasks_v2
+      ''',
+      [inboxId],
+    );
+    await database.execute('DROP TABLE tasks_v2');
   }
 }
