@@ -406,7 +406,8 @@ void main() {
     await tester.tap(find.text('Delete category'));
     await pumpUntil(
       tester,
-      () => find.text('Its tasks will be moved to Inbox.').evaluate().isNotEmpty,
+      () =>
+          find.text('Its tasks will be moved to Inbox.').evaluate().isNotEmpty,
       'Delete-category confirmation did not appear.',
     );
     await tester.tap(find.text('Delete'));
@@ -490,7 +491,9 @@ void main() {
     await tester.tap(find.text('Dark'));
     await pumpUntil(
       tester,
-      () => tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode == ThemeMode.dark,
+      () =>
+          tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode ==
+          ThemeMode.dark,
       'Theme mode did not update to dark.',
     );
 

@@ -288,7 +288,8 @@ class FakeCategoryRepository extends CategoryRepository {
     final normalized = name.toLowerCase();
     final duplicate = _store.categories.values.any(
       (category) =>
-          category.id != excludingId && category.name.toLowerCase() == normalized,
+          category.id != excludingId &&
+          category.name.toLowerCase() == normalized,
     );
     if (duplicate) {
       throw StateError('A category named "$name" already exists.');
