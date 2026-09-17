@@ -76,14 +76,10 @@ void main() {
     await pumpKedis(tester);
     await openInbox(tester);
     await tester.tap(find.byTooltip('Add task'));
-    await pumpUntil(
-      tester,
-      () {
-        final draftInput = find.byKey(const ValueKey('task-draft-input'));
-        return draftInput.evaluate().isNotEmpty;
-      },
-      'Task draft editor did not appear.',
-    );
+    await pumpUntil(tester, () {
+      final draftInput = find.byKey(const ValueKey('task-draft-input'));
+      return draftInput.evaluate().isNotEmpty;
+    }, 'Task draft editor did not appear.');
 
     final input = find.byKey(const ValueKey('task-draft-input'));
     final initialHeight = tester.getSize(input).height;
@@ -140,16 +136,12 @@ void main() {
     expect(find.byType(EditingTaskItem), findsOneWidget);
 
     await tester.tap(find.text('Second task'));
-    await pumpUntil(
-      tester,
-      () {
-        final fields = find.byType(TextField);
-        if (fields.evaluate().isEmpty) return false;
-        final editor = tester.widget<TextField>(fields);
-        return editor.controller?.text == 'Second task';
-      },
-      'Second task did not become the active editor.',
-    );
+    await pumpUntil(tester, () {
+      final fields = find.byType(TextField);
+      if (fields.evaluate().isEmpty) return false;
+      final editor = tester.widget<TextField>(fields);
+      return editor.controller?.text == 'Second task';
+    }, 'Second task did not become the active editor.');
 
     expect(find.byType(EditingTaskItem), findsOneWidget);
     expect(
