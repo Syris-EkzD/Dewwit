@@ -1,4 +1,4 @@
-name: Category Navigation Pump Fix
+name: Category Navigation Wait Correction
 
 on:
   pull_request:
@@ -18,34 +18,65 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Replace category navigation pumpAndSettle with bounded loading
+      - name: Correct bounded waits after category navigation
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
+          files = [
+              Path('test/widget_test.dart'),
+              Path('test/task_interaction_regression_test.dart'),
+          ]
+          old = """    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (find.text('Inbox').evaluate().isNotEmpty) {
+        return;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('Kedis category home did not finish loading.');
+"""
           replacements = {
-              Path('test/widget_test.dart'): (
-                  """  Future<void> openCategory(WidgetTester tester, String name) async {\n    await tester.tap(find.text(name).first);\n    await tester.pumpAndSettle();\n  }\n""",
-                  """  Future<void> openCategory(WidgetTester tester, String name) async {\n    await tester.tap(find.text(name).first);\n    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.byTooltip('Add task').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Category task screen did not finish loading.');\n  }\n""",
-              ),
-              Path('test/task_interaction_regression_test.dart'): (
-                  """  Future<void> openInbox(WidgetTester tester) async {\n    await tester.tap(find.text('Inbox').first);\n    await tester.pumpAndSettle();\n  }\n""",
-                  """  Future<void> openInbox(WidgetTester tester) async {\n    await tester.tap(find.text('Inbox').first);\n    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.byTooltip('Add task').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Inbox task screen did not finish loading.');\n  }\n""",
-              ),
+              Path('test/widget_test.dart'): """    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (find.byTooltip('Add task').evaluate().isNotEmpty) {
+        return;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('Category task screen did not finish loading.');
+""",
+              Path('test/task_interaction_regression_test.dart'): """    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (find.byTooltip('Add task').evaluate().isNotEmpty) {
+        return;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('Inbox task screen did not finish loading.');
+""",
           }
 
-          for path, (needle, replacement) in replacements.items():
+          for path in files:
               text = path.read_text()
-              if needle not in text:
-                  raise SystemExit(f'category navigation helper pattern not found in {path}')
-              path.write_text(text.replace(needle, replacement, 1))
+              # The first bounded wait is the home loader and is correct. Replace
+              # only the second copy introduced by the late diagnostic run.
+              first = text.find(old)
+              second = text.find(old, first + len(old)) if first >= 0 else -1
+              if second < 0:
+                  raise SystemExit(f'second bad bounded wait not found in {path}')
+              replacement = replacements[path]
+              text = text[:second] + replacement + text[second + len(old):]
+              path.write_text(text)
           PY
+          flutter pub get
           dart format test/widget_test.dart test/task_interaction_regression_test.dart
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add test/widget_test.dart test/task_interaction_regression_test.dart
           if ! git diff --cached --quiet; then
-            git commit -m "fix(tests): bound category navigation pumps"
+            git commit -m "fix(tests): wait for category screen after navigation"
+            git pull --rebase origin feat/kedis-categories
             git push origin HEAD:feat/kedis-categories
           fi
