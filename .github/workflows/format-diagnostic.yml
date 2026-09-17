@@ -1,37 +1,65 @@
-name: Format Diagnostic
+name: Test Diagnostic
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  format-diagnostic:
+  restored-regressions:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout feature branch
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           ref: feat/kedis-categories
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+      - run: flutter pub get
+      - run: flutter test test/task_interaction_regression_test.dart --reporter expanded
 
-      - name: Install dependencies
-        run: flutter pub get
+  category-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/kedis-categories
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/widget_test.dart --reporter expanded
 
-      - name: Apply Dart formatter to feature branch
-        run: |
-          dart format lib test
-          if ! git diff --quiet -- lib test; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add lib test
-            git commit -m "style: apply Dart formatter"
-            git push origin HEAD:feat/kedis-categories
-          fi
+  category-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/kedis-categories
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/category_migration_test.dart test/category_repository_test.dart test/task_category_test.dart --reporter expanded
+
+  existing-task-repository:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/kedis-categories
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter test test/task_repository_test.dart --reporter expanded
