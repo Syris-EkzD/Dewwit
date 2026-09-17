@@ -4,7 +4,6 @@ import 'package:kedis/repositories/kedis_database.dart';
 import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
-import 'package:kedis/widgets/editable_task_item.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
