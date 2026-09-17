@@ -15,12 +15,13 @@ void main() {
   late CategoryRepository categories;
   late int widgetRefreshCount;
 
-  setUp(() {
+  setUp(() async {
     sqfliteFfiInit();
     database = KedisDatabase.atPath(
       inMemoryDatabasePath,
       factory: databaseFactoryFfi,
     );
+    await database.database;
     tasks = TaskRepository.withDatabase(database);
     categories = CategoryRepository.withDatabase(database);
     widgetRefreshCount = 0;
