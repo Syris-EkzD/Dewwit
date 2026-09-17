@@ -97,18 +97,18 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 
   Future<void> _quickCapture() async {
-    final controller = TextEditingController();
+    var draftTitle = '';
     final title = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add to Inbox'),
         content: TextField(
-          controller: controller,
           autofocus: true,
           minLines: 1,
           maxLines: null,
           textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(hintText: 'Task title'),
+          onChanged: (value) => draftTitle = value,
           onSubmitted: (value) {
             final normalized = value.trim();
             if (normalized.isNotEmpty) {
@@ -123,7 +123,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           ),
           FilledButton(
             onPressed: () {
-              final normalized = controller.text.trim();
+              final normalized = draftTitle.trim();
               if (normalized.isNotEmpty) {
                 Navigator.of(context).pop(normalized);
               }
@@ -133,7 +133,6 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
         ],
       ),
     );
-    controller.dispose();
     if (title == null || !mounted) return;
 
     try {
