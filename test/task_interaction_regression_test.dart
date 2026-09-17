@@ -142,7 +142,10 @@ void main() {
       () {
         final fields = find.byType(TextField).evaluate();
         if (fields.isEmpty) return false;
-        return tester.widget<TextField>(find.byType(TextField)).controller?.text ==
+        return tester
+                .widget<TextField>(find.byType(TextField))
+                .controller
+                ?.text ==
             'Second task';
       },
       'Second task did not become the active editor.',
