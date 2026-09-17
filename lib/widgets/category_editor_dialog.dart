@@ -23,82 +23,78 @@ class CategoryEditorResult {
 Future<CategoryEditorResult?> showCategoryEditorDialog(
   BuildContext context, {
   TaskCategory? category,
-}) async {
-  final controller = TextEditingController(text: category?.name ?? '');
+}) {
+  var draftName = category?.name ?? '';
   var selectedColor = category?.colorValue ?? categoryColorPalette.first;
   var showNameError = false;
 
-  final result = await showDialog<CategoryEditorResult>(
+  return showDialog<CategoryEditorResult>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: Text(category == null ? 'Create category' : 'Edit category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: controller,
-              autofocus: true,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                errorText: showNameError ? 'Enter a category name.' : null,
+      builder: (context, setDialogState) {
+        void submit() {
+          final name = draftName.trim();
+          if (name.isEmpty) {
+            setDialogState(() => showNameError = true);
+            return;
+          }
+          Navigator.of(dialogContext).pop(
+            CategoryEditorResult(name: name, colorValue: selectedColor),
+          );
+        }
+
+        return AlertDialog(
+          title: Text(category == null ? 'Create category' : 'Edit category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                initialValue: draftName,
+                autofocus: true,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  labelText: 'Name',
+                  errorText: showNameError ? 'Enter a category name.' : null,
+                ),
+                onChanged: (value) => draftName = value,
+                onFieldSubmitted: (value) {
+                  draftName = value;
+                  submit();
+                },
               ),
-              onSubmitted: (_) {
-                final name = controller.text.trim();
-                if (name.isEmpty) {
-                  setDialogState(() => showNameError = true);
-                  return;
-                }
-                Navigator.of(dialogContext).pop(
-                  CategoryEditorResult(name: name, colorValue: selectedColor),
-                );
-              },
+              const SizedBox(height: KedisSpacing.medium),
+              Text('Color', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: KedisSpacing.small),
+              Wrap(
+                spacing: KedisSpacing.small,
+                runSpacing: KedisSpacing.small,
+                children: [
+                  for (final colorValue in categoryColorPalette)
+                    _CategoryColorChoice(
+                      colorValue: colorValue,
+                      selected: selectedColor == colorValue,
+                      onTap: () =>
+                          setDialogState(() => selectedColor = colorValue),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
             ),
-            const SizedBox(height: KedisSpacing.medium),
-            Text('Color', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: KedisSpacing.small),
-            Wrap(
-              spacing: KedisSpacing.small,
-              runSpacing: KedisSpacing.small,
-              children: [
-                for (final colorValue in categoryColorPalette)
-                  _CategoryColorChoice(
-                    colorValue: colorValue,
-                    selected: selectedColor == colorValue,
-                    onTap: () =>
-                        setDialogState(() => selectedColor = colorValue),
-                  ),
-              ],
+            FilledButton(
+              onPressed: submit,
+              child: Text(category == null ? 'Create' : 'Save'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = controller.text.trim();
-              if (name.isEmpty) {
-                setDialogState(() => showNameError = true);
-                return;
-              }
-              Navigator.of(dialogContext).pop(
-                CategoryEditorResult(name: name, colorValue: selectedColor),
-              );
-            },
-            child: Text(category == null ? 'Create' : 'Save'),
-          ),
-        ],
-      ),
+        );
+      },
     ),
   );
-
-  controller.dispose();
-  return result;
 }
 
 class _CategoryColorChoice extends StatelessWidget {
