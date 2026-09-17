@@ -31,6 +31,19 @@ void main() {
 
   tearDown(() => database.close());
 
+  Future<void> pumpUntil(
+    WidgetTester tester,
+    bool Function() condition,
+    String failureMessage,
+  ) async {
+    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (condition()) return;
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail(failureMessage);
+  }
+
   Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
       KedisApp(
@@ -42,26 +55,20 @@ void main() {
         },
       ),
     );
-    await tester.pump();
-    for (var attempt = 0; attempt < 40; attempt += 1) {
-      if (find.text('Inbox').evaluate().isNotEmpty) {
-        return;
-      }
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    fail('Kedis category home did not finish loading.');
+    await pumpUntil(
+      tester,
+      () => find.text('Inbox').evaluate().isNotEmpty,
+      'Kedis category home did not finish loading.',
+    );
   }
 
   Future<void> openCategory(WidgetTester tester, String name) async {
     await tester.tap(find.text(name).first);
-    await tester.pump();
-    for (var attempt = 0; attempt < 40; attempt += 1) {
-      if (find.byTooltip('Add task').evaluate().isNotEmpty) {
-        return;
-      }
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    fail('$name task screen did not finish loading.');
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Add task').evaluate().isNotEmpty,
+      '$name task screen did not finish loading.',
+    );
   }
 
   testWidgets('shows category cards with a three-task active preview', (
@@ -100,10 +107,18 @@ void main() {
     await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Add task to Inbox'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Add to Inbox').evaluate().isNotEmpty,
+      'Quick-capture dialog did not appear.',
+    );
     await tester.enterText(find.byType(TextField), '  Quick capture  ');
     await tester.tap(find.text('Add'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Quick capture').evaluate().isNotEmpty,
+      'Quick-capture task did not appear on the category home.',
+    );
 
     final created = (await tasks.getTasks()).single;
     expect(created.title, 'Quick capture');
@@ -138,13 +153,21 @@ void main() {
     await openCategory(tester, 'School');
 
     await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditableTaskItem).evaluate().isNotEmpty,
+      'Inline task draft did not appear.',
+    );
     expect(find.byType(EditableTaskItem), findsOneWidget);
     expect(find.byTooltip('Add task'), findsNothing);
 
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
     await tester.tap(find.byTooltip('Save task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Database proposal').evaluate().isNotEmpty,
+      'Category task did not finish saving.',
+    );
 
     final created = (await tasks.getTasks(categoryId: school.id)).single;
     expect(created.title, 'Database proposal');
@@ -160,9 +183,17 @@ void main() {
     await openCategory(tester, 'Inbox');
 
     await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditableTaskItem).evaluate().isNotEmpty,
+      'Inline task draft did not appear.',
+    );
     await tester.tap(find.byTooltip('Discard draft'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditableTaskItem).evaluate().isEmpty,
+      'Inline task draft did not close.',
+    );
 
     expect(find.byType(EditableTaskItem), findsNothing);
     expect(await tasks.getTasks(), isEmpty);
@@ -178,11 +209,21 @@ void main() {
     await openCategory(tester, 'Inbox');
 
     await tester.tap(find.text('Original title'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Task editor did not appear.',
+    );
     expect(find.byType(EditingTaskItem), findsOneWidget);
     await tester.enterText(find.byType(TextField), '  Updated title  ');
     await tester.tap(find.byTooltip('Save changes'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Updated title').evaluate().isNotEmpty &&
+          find.byType(EditingTaskItem).evaluate().isEmpty,
+      'Task title edit did not finish saving.',
+    );
 
     final updated = (await tasks.getTasks(categoryId: inbox.id)).single;
     expect(updated.id, original.id);
@@ -200,7 +241,11 @@ void main() {
     await openCategory(tester, 'Inbox');
 
     await tester.tap(find.text('Keep title'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Task editor did not appear.',
+    );
     await tester.enterText(find.byType(TextField), '   ');
     await tester.tap(find.byTooltip('Save changes'));
     await tester.pump();
@@ -292,10 +337,18 @@ void main() {
     await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Add category'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Create').evaluate().isNotEmpty,
+      'Create-category dialog did not appear.',
+    );
     await tester.enterText(find.byType(TextField), 'School');
     await tester.tap(find.text('Create'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Category actions').evaluate().isNotEmpty,
+      'Created category did not appear on the category home.',
+    );
     expect(find.text('School'), findsOneWidget);
 
     final school = (await categories.getCategories()).singleWhere(
@@ -306,10 +359,20 @@ void main() {
     await tester.tap(find.byTooltip('Category actions'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Edit category'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(TextField).evaluate().isNotEmpty,
+      'Edit-category dialog did not appear.',
+    );
     await tester.enterText(find.byType(TextField), 'Programming');
     await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Programming').evaluate().isNotEmpty &&
+          find.byTooltip('Category actions').evaluate().isNotEmpty,
+      'Edited category did not appear on the category home.',
+    );
     expect(find.text('Programming'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Category actions'));
