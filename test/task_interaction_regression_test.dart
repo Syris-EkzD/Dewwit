@@ -140,13 +140,10 @@ void main() {
     await pumpUntil(
       tester,
       () {
-        final fields = find.byType(TextField).evaluate();
-        if (fields.isEmpty) return false;
-        return tester
-                .widget<TextField>(find.byType(TextField))
-                .controller
-                ?.text ==
-            'Second task';
+        final fields = find.byType(TextField);
+        if (fields.evaluate().isEmpty) return false;
+        final editor = tester.widget<TextField>(fields);
+        return editor.controller?.text == 'Second task';
       },
       'Second task did not become the active editor.',
     );
