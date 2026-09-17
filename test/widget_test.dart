@@ -56,12 +56,12 @@ void main() {
     await tester.tap(find.text(name).first);
     await tester.pump();
     for (var attempt = 0; attempt < 40; attempt += 1) {
-      if (find.text('Inbox').evaluate().isNotEmpty) {
+      if (find.byTooltip('Add task').evaluate().isNotEmpty) {
         return;
       }
       await tester.pump(const Duration(milliseconds: 50));
     }
-    fail('Kedis category home did not finish loading.');
+    fail('$name task screen did not finish loading.');
   }
 
   testWidgets('shows category cards with a three-task active preview', (
