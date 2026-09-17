@@ -23,78 +23,82 @@ class CategoryEditorResult {
 Future<CategoryEditorResult?> showCategoryEditorDialog(
   BuildContext context, {
   TaskCategory? category,
-}) {
+}) async {
   var draftName = category?.name ?? '';
   var selectedColor = category?.colorValue ?? categoryColorPalette.first;
   var showNameError = false;
 
-  return showDialog<CategoryEditorResult>(
+  final result = await showDialog<CategoryEditorResult>(
     context: context,
     builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) {
-        void submit() {
-          final name = draftName.trim();
-          if (name.isEmpty) {
-            setDialogState(() => showNameError = true);
-            return;
-          }
-          Navigator.of(dialogContext).pop(
-            CategoryEditorResult(name: name, colorValue: selectedColor),
-          );
-        }
-
-        return AlertDialog(
-          title: Text(category == null ? 'Create category' : 'Edit category'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                initialValue: draftName,
-                autofocus: true,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  labelText: 'Name',
-                  errorText: showNameError ? 'Enter a category name.' : null,
-                ),
-                onChanged: (value) => draftName = value,
-                onFieldSubmitted: (value) {
-                  draftName = value;
-                  submit();
-                },
+      builder: (context, setDialogState) => AlertDialog(
+        title: Text(category == null ? 'Create category' : 'Edit category'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextFormField(
+              initialValue: draftName,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: 'Name',
+                errorText: showNameError ? 'Enter a category name.' : null,
               ),
-              const SizedBox(height: KedisSpacing.medium),
-              Text('Color', style: Theme.of(context).textTheme.labelLarge),
-              const SizedBox(height: KedisSpacing.small),
-              Wrap(
-                spacing: KedisSpacing.small,
-                runSpacing: KedisSpacing.small,
-                children: [
-                  for (final colorValue in categoryColorPalette)
-                    _CategoryColorChoice(
-                      colorValue: colorValue,
-                      selected: selectedColor == colorValue,
-                      onTap: () =>
-                          setDialogState(() => selectedColor = colorValue),
-                    ),
-                ],
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Cancel'),
+              onChanged: (value) => draftName = value,
+              onFieldSubmitted: (value) {
+                final name = value.trim();
+                if (name.isEmpty) {
+                  setDialogState(() => showNameError = true);
+                  return;
+                }
+                Navigator.of(dialogContext).pop(
+                  CategoryEditorResult(name: name, colorValue: selectedColor),
+                );
+              },
             ),
-            FilledButton(
-              onPressed: submit,
-              child: Text(category == null ? 'Create' : 'Save'),
+            const SizedBox(height: KedisSpacing.medium),
+            Text('Color', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: KedisSpacing.small),
+            Wrap(
+              spacing: KedisSpacing.small,
+              runSpacing: KedisSpacing.small,
+              children: [
+                for (final colorValue in categoryColorPalette)
+                  _CategoryColorChoice(
+                    colorValue: colorValue,
+                    selected: selectedColor == colorValue,
+                    onTap: () =>
+                        setDialogState(() => selectedColor = colorValue),
+                  ),
+              ],
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = draftName.trim();
+              if (name.isEmpty) {
+                setDialogState(() => showNameError = true);
+                return;
+              }
+              Navigator.of(dialogContext).pop(
+                CategoryEditorResult(name: name, colorValue: selectedColor),
+              );
+            },
+            child: Text(category == null ? 'Create' : 'Save'),
+          ),
+        ],
+      ),
     ),
   );
+
+  return result;
 }
 
 class _CategoryColorChoice extends StatelessWidget {

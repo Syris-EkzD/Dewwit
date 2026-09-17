@@ -13,7 +13,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Create category'), findsOneWidget);
-    expect(tester.widget<TextFormField>(find.byType(TextFormField)).initialValue, '');
+    expect(
+      tester.widget<TextFormField>(find.byType(TextFormField)).initialValue,
+      '',
+    );
 
     await tester.tap(find.text('Create'));
     await tester.pump();
@@ -110,9 +113,9 @@ class _CategoryEditorHarnessState extends State<_CategoryEditorHarness> {
             onPressed: _openEdit,
             child: const Text('Open edit'),
           ),
-          if (_result case final result?) ...[
-            Text('Result name: ${result.name}'),
-            Text('Result color: ${result.colorValue}'),
+          if (_result != null) ...[
+            Text('Result name: ${_result!.name}'),
+            Text('Result color: ${_result!.colorValue}'),
           ],
         ],
       ),
