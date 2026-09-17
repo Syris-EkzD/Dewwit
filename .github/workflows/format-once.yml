@@ -1,0 +1,36 @@
+name: One-shot Dart formatter
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  format-once:
+    if: github.event.pull_request.head.ref == 'feat/kedis-categories'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/kedis-categories
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply Dart formatter
+        run: |
+          dart format test/task_interaction_regression_test.dart
+          git diff --check
+          if ! git diff --quiet -- test/task_interaction_regression_test.dart; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add test/task_interaction_regression_test.dart
+            git commit -m "style(tests): apply Dart formatter"
+            git push origin HEAD:feat/kedis-categories
+          fi
