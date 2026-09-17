@@ -163,14 +163,10 @@ void main() {
     expect(find.byType(EditableTaskItem), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
-    await pumpUntil(
-      tester,
-      () {
-        final saveAction = find.byTooltip('Save task').hitTestable();
-        return saveAction.evaluate().isNotEmpty;
-      },
-      'Inline task save action did not become tappable.',
-    );
+    await pumpUntil(tester, () {
+      final saveAction = find.byTooltip('Save task').hitTestable();
+      return saveAction.evaluate().isNotEmpty;
+    }, 'Inline task save action did not become tappable.');
     await tester.tap(find.byTooltip('Save task').hitTestable());
     await pumpUntil(
       tester,
