@@ -1,9 +1,7 @@
 import 'package:kedis/models/task.dart';
 import 'package:kedis/models/task_category.dart';
 import 'package:kedis/repositories/category_repository.dart';
-import 'package:kedis/repositories/kedis_database.dart';
 import 'package:kedis/repositories/task_repository.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class FakeRepositories {
   FakeRepositories() {
@@ -17,13 +15,7 @@ class FakeRepositories {
 }
 
 class FakeTaskRepository extends TaskRepository {
-  FakeTaskRepository._(this._store)
-    : super.withDatabase(
-        KedisDatabase.atPath(
-          'unused-widget-test.db',
-          factory: databaseFactoryFfi,
-        ),
-      );
+  FakeTaskRepository._(this._store) : super();
 
   final _FakeRepositoryStore _store;
 
@@ -53,28 +45,33 @@ class FakeTaskRepository extends TaskRepository {
 
   @override
   Future<List<Task>> getTasks({int? categoryId}) async {
-    final tasks = _store.tasks.values
-        .where((task) => categoryId == null || task.categoryId == categoryId)
-        .toList();
-    tasks.sort(_compareTasks);
-    return List.unmodifiable(tasks);
+    final result = <Task>[];
+    for (final task in _store.tasks.values) {
+      if (categoryId == null || task.categoryId == categoryId) {
+        result.add(task);
+      }
+    }
+    result.sort(_compareTasks);
+    return List.unmodifiable(result);
   }
 
   @override
   Future<List<Task>> getActiveTasks({int? categoryId}) async {
-    final tasks = _store.tasks.values
-        .where(
-          (task) =>
-              !task.isCompleted &&
-              (categoryId == null || task.categoryId == categoryId),
-        )
-        .toList();
-    tasks.sort((left, right) {
+    final result = <Task>[];
+    for (final task in _store.tasks.values) {
+      final inCategory = categoryId == null || task.categoryId == categoryId;
+      if (!task.isCompleted && inCategory) {
+        result.add(task);
+      }
+    }
+    result.sort((left, right) {
       final byCreatedAt = left.createdAt.compareTo(right.createdAt);
-      if (byCreatedAt != 0) return byCreatedAt;
+      if (byCreatedAt != 0) {
+        return byCreatedAt;
+      }
       return left.id.compareTo(right.id);
     });
-    return List.unmodifiable(tasks);
+    return List.unmodifiable(result);
   }
 
   @override
@@ -83,8 +80,11 @@ class FakeTaskRepository extends TaskRepository {
     if (normalizedTitle.isEmpty) {
       throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
     }
+
     final current = _store.tasks[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
 
     final updated = _copyTask(current, title: normalizedTitle);
     _store.tasks[id] = updated;
@@ -94,7 +94,9 @@ class FakeTaskRepository extends TaskRepository {
   @override
   Future<Task?> moveTaskToCategory(int id, int categoryId) async {
     final current = _store.tasks[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
     if (!_store.categories.containsKey(categoryId)) {
       throw StateError('Task category does not exist.');
     }
@@ -107,11 +109,24 @@ class FakeTaskRepository extends TaskRepository {
   @override
   Future<Task?> toggleTask(int id) async {
     final current = _store.tasks[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
 
-    final updated = current.isCompleted
-        ? _copyTask(current, isCompleted: false, clearCompletedAt: true)
-        : _copyTask(current, isCompleted: true, completedAt: _now());
+    final Task updated;
+    if (current.isCompleted) {
+      updated = _copyTask(
+        current,
+        isCompleted: false,
+        clearCompletedAt: true,
+      );
+    } else {
+      updated = _copyTask(
+        current,
+        isCompleted: true,
+        completedAt: _now(),
+      );
+    }
     _store.tasks[id] = updated;
     return updated;
   }
@@ -125,8 +140,11 @@ class FakeTaskRepository extends TaskRepository {
     if (isCompleted && completedAt == null) {
       throw ArgumentError.notNull('completedAt');
     }
+
     final current = _store.tasks[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
 
     final updated = _copyTask(
       current,
@@ -139,7 +157,9 @@ class FakeTaskRepository extends TaskRepository {
   }
 
   @override
-  Future<bool> deleteTask(int id) async => _store.tasks.remove(id) != null;
+  Future<bool> deleteTask(int id) async {
+    return _store.tasks.remove(id) != null;
+  }
 
   @override
   Future<Task> restoreTask(Task task) async {
@@ -157,12 +177,15 @@ class FakeTaskRepository extends TaskRepository {
     if (left.isCompleted != right.isCompleted) {
       return left.isCompleted ? 1 : -1;
     }
+
     if (left.isCompleted) {
       final leftCompletedAt = left.completedAt;
       final rightCompletedAt = right.completedAt;
       if (leftCompletedAt != null && rightCompletedAt != null) {
         final byCompletion = rightCompletedAt.compareTo(leftCompletedAt);
-        if (byCompletion != 0) return byCompletion;
+        if (byCompletion != 0) {
+          return byCompletion;
+        }
       } else if (leftCompletedAt != null) {
         return -1;
       } else if (rightCompletedAt != null) {
@@ -171,38 +194,39 @@ class FakeTaskRepository extends TaskRepository {
     }
 
     final byCreatedAt = left.createdAt.compareTo(right.createdAt);
-    if (byCreatedAt != 0) return byCreatedAt;
+    if (byCreatedAt != 0) {
+      return byCreatedAt;
+    }
     return left.id.compareTo(right.id);
   }
 }
 
 class FakeCategoryRepository extends CategoryRepository {
-  FakeCategoryRepository._(this._store)
-    : super.withDatabase(
-        KedisDatabase.atPath(
-          'unused-widget-test.db',
-          factory: databaseFactoryFfi,
-        ),
-      );
+  FakeCategoryRepository._(this._store) : super();
 
   final _FakeRepositoryStore _store;
 
   @override
   Future<List<TaskCategory>> getCategories() async {
-    final categories = _store.categories.values.toList()
-      ..sort((left, right) {
-        if (left.isSystem != right.isSystem) {
-          return left.isSystem ? -1 : 1;
-        }
-        final byCreatedAt = left.createdAt.compareTo(right.createdAt);
-        if (byCreatedAt != 0) return byCreatedAt;
-        return left.id.compareTo(right.id);
-      });
-    return List.unmodifiable(categories);
+    final result = _store.categories.values.toList();
+    result.sort((left, right) {
+      if (left.isSystem != right.isSystem) {
+        return left.isSystem ? -1 : 1;
+      }
+
+      final byCreatedAt = left.createdAt.compareTo(right.createdAt);
+      if (byCreatedAt != 0) {
+        return byCreatedAt;
+      }
+      return left.id.compareTo(right.id);
+    });
+    return List.unmodifiable(result);
   }
 
   @override
-  Future<TaskCategory> getInbox() async => _store.inbox;
+  Future<TaskCategory> getInbox() async {
+    return _store.inbox;
+  }
 
   @override
   Future<TaskCategory> createCategory(String name, int colorValue) async {
@@ -224,7 +248,9 @@ class FakeCategoryRepository extends CategoryRepository {
   @override
   Future<TaskCategory?> renameCategory(int id, String name) async {
     final current = _store.categories[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
     _ensureCustomCategory(current);
 
     final normalizedName = _normalizeName(name);
@@ -238,7 +264,9 @@ class FakeCategoryRepository extends CategoryRepository {
   Future<TaskCategory?> updateCategoryColor(int id, int colorValue) async {
     _validateColorValue(colorValue);
     final current = _store.categories[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
     _ensureCustomCategory(current);
 
     final updated = _copyCategory(current, colorValue: colorValue);
@@ -249,19 +277,22 @@ class FakeCategoryRepository extends CategoryRepository {
   @override
   Future<int?> deleteCategory(int id) async {
     final current = _store.categories[id];
-    if (current == null) return null;
+    if (current == null) {
+      return null;
+    }
     _ensureCustomCategory(current);
 
     var movedTasks = 0;
     for (final entry in _store.tasks.entries.toList()) {
       final task = entry.value;
-      if (task.categoryId == id) {
-        _store.tasks[entry.key] = _copyTask(
-          task,
-          categoryId: _store.inbox.id,
-        );
-        movedTasks += 1;
+      if (task.categoryId != id) {
+        continue;
       }
+      _store.tasks[entry.key] = _copyTask(
+        task,
+        categoryId: _store.inbox.id,
+      );
+      movedTasks += 1;
     }
     _store.categories.remove(id);
     return movedTasks;
@@ -284,19 +315,24 @@ class FakeCategoryRepository extends CategoryRepository {
 
   void _validateColorValue(int colorValue) {
     if (colorValue < 0 || colorValue > 0xFFFFFFFF) {
-      throw RangeError.range(colorValue, 0, 0xFFFFFFFF, 'colorValue');
+      throw RangeError.range(
+        colorValue,
+        0,
+        0xFFFFFFFF,
+        'colorValue',
+      );
     }
   }
 
   void _ensureNameAvailable(String name, {int? excludingId}) {
-    final normalized = name.toLowerCase();
-    final duplicate = _store.categories.values.any(
-      (category) =>
-          category.id != excludingId &&
-          category.name.toLowerCase() == normalized,
-    );
-    if (duplicate) {
-      throw StateError('A category named "$name" already exists.');
+    final normalizedName = name.toLowerCase();
+    for (final category in _store.categories.values) {
+      if (category.id == excludingId) {
+        continue;
+      }
+      if (category.name.toLowerCase() == normalizedName) {
+        throw StateError('A category named "$name" already exists.');
+      }
     }
   }
 
@@ -308,27 +344,30 @@ class FakeCategoryRepository extends CategoryRepository {
 }
 
 class _FakeRepositoryStore {
-  _FakeRepositoryStore() {
+  _FakeRepositoryStore()
+    : inbox = TaskCategory(
+        id: 1,
+        name: 'Inbox',
+        colorValue: 0xFF426A5A,
+        isSystem: true,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+      ) {
     categories[inbox.id] = inbox;
   }
 
-  final TaskCategory inbox = TaskCategory(
-    id: 1,
-    name: KedisDatabase.inboxName,
-    colorValue: KedisDatabase.inboxColorValue,
-    isSystem: true,
-    createdAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-  );
+  final TaskCategory inbox;
   final Map<int, TaskCategory> categories = {};
   final Map<int, Task> tasks = {};
   int nextCategoryId = 2;
   int nextTaskId = 1;
 }
 
-DateTime _now() => DateTime.fromMillisecondsSinceEpoch(
-  DateTime.now().millisecondsSinceEpoch,
-  isUtc: true,
-);
+DateTime _now() {
+  return DateTime.fromMillisecondsSinceEpoch(
+    DateTime.now().millisecondsSinceEpoch,
+    isUtc: true,
+  );
+}
 
 Task _copyTask(
   Task task, {
