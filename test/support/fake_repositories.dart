@@ -273,7 +273,11 @@ class FakeCategoryRepository extends CategoryRepository {
   String _normalizeName(String name) {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
-      throw ArgumentError.value(name, 'name', 'Category name cannot be empty.');
+      throw ArgumentError.value(
+        name,
+        'name',
+        'Category name cannot be empty.',
+      );
     }
     return normalizedName;
   }
