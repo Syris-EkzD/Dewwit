@@ -28,6 +28,19 @@ void main() {
 
   tearDown(() => database.close());
 
+  Future<void> pumpUntil(
+    WidgetTester tester,
+    bool Function() condition,
+    String failureMessage,
+  ) async {
+    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (condition()) return;
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail(failureMessage);
+  }
+
   Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
       KedisApp(
@@ -41,26 +54,20 @@ void main() {
     );
     // The category home shows an animated progress indicator while SQLite loads,
     // so wait for its stable Inbox content instead of settling every animation.
-    await tester.pump();
-    for (var attempt = 0; attempt < 40; attempt += 1) {
-      if (find.text('Inbox').evaluate().isNotEmpty) {
-        return;
-      }
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    fail('Kedis category home did not finish loading.');
+    await pumpUntil(
+      tester,
+      () => find.text('Inbox').evaluate().isNotEmpty,
+      'Kedis category home did not finish loading.',
+    );
   }
 
   Future<void> openInbox(WidgetTester tester) async {
     await tester.tap(find.text('Inbox').first);
-    await tester.pump();
-    for (var attempt = 0; attempt < 40; attempt += 1) {
-      if (find.byTooltip('Add task').evaluate().isNotEmpty) {
-        return;
-      }
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    fail('Inbox task screen did not finish loading.');
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Add task').evaluate().isNotEmpty,
+      'Inbox task screen did not finish loading.',
+    );
   }
 
   testWidgets('multiline draft grows to keep its text visible', (
@@ -69,7 +76,11 @@ void main() {
     await pumpKedis(tester);
     await openInbox(tester);
     await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byKey(const ValueKey('task-draft-input')).evaluate().isNotEmpty,
+      'Task draft editor did not appear.',
+    );
 
     final input = find.byKey(const ValueKey('task-draft-input'));
     final initialHeight = tester.getSize(input).height;
@@ -94,7 +105,11 @@ void main() {
     await openInbox(tester);
 
     await tester.tap(find.text('Unchanged title'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Task editor did not appear.',
+    );
     await tester.enterText(find.byType(TextField), 'Discard this');
     await tester.tap(find.byTooltip('Cancel editing'));
     await tester.pumpAndSettle();
@@ -114,11 +129,24 @@ void main() {
     await openInbox(tester);
 
     await tester.tap(find.text('First task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'First task editor did not appear.',
+    );
     expect(find.byType(EditingTaskItem), findsOneWidget);
 
     await tester.tap(find.text('Second task'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () {
+        final fields = find.byType(TextField).evaluate();
+        if (fields.isEmpty) return false;
+        return tester.widget<TextField>(find.byType(TextField)).controller?.text ==
+            'Second task';
+      },
+      'Second task did not become the active editor.',
+    );
 
     expect(find.byType(EditingTaskItem), findsOneWidget);
     expect(
@@ -152,10 +180,20 @@ void main() {
     await openInbox(tester);
 
     await tester.tap(find.text('Newer completed'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Completed task editor did not appear.',
+    );
     await tester.enterText(find.byType(TextField), 'Renamed completed');
     await tester.tap(find.byTooltip('Save changes'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Renamed completed').evaluate().isNotEmpty &&
+          find.byType(EditingTaskItem).evaluate().isEmpty,
+      'Completed task edit did not finish saving.',
+    );
 
     final persisted = await tasks.getTasks();
     final updated = persisted.first;
