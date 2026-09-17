@@ -32,6 +32,17 @@ void main() {
     fail(failureMessage);
   }
 
+  Future<void> waitForUndo(
+    WidgetTester tester,
+    String failureMessage,
+  ) async {
+    await pumpUntil(
+      tester,
+      () => find.text('UNDO').hitTestable().evaluate().isNotEmpty,
+      failureMessage,
+    );
+  }
+
   Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
       KedisApp(
@@ -216,9 +227,12 @@ void main() {
       'Deleted task did not leave the list or expose Undo.',
     );
     await tester.pump(const Duration(seconds: 5));
-    await tester.pump();
+    await pumpUntil(
+      tester,
+      () => find.text('UNDO').evaluate().isEmpty,
+      'Undo snackbar did not expire.',
+    );
 
-    expect(find.text('UNDO'), findsNothing);
     expect(find.text('Delete permanently'), findsNothing);
     expect(await tasks.getTasks(), isEmpty);
     expect(widgetRefreshCount, 1);
@@ -243,8 +257,9 @@ void main() {
     );
 
     expect(find.text('Completed'), findsNothing);
+    await waitForUndo(tester, 'Uncompletion Undo action was not tappable.');
 
-    await tester.tap(find.text('UNDO'));
+    await tester.tap(find.text('UNDO').hitTestable());
     await pumpUntil(
       tester,
       () =>
