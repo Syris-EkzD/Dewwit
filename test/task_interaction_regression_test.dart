@@ -39,6 +39,8 @@ void main() {
         },
       ),
     );
+    // The category home shows an animated progress indicator while SQLite loads,
+    // so wait for its stable Inbox content instead of settling every animation.
     await tester.pump();
     for (var attempt = 0; attempt < 40; attempt += 1) {
       if (find.text('Inbox').evaluate().isNotEmpty) {
