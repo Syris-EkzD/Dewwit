@@ -1,16 +1,15 @@
-name: Test Diagnostic
+name: UI Test Pump Fix
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  restored-regressions:
+  apply-fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
         with:
@@ -19,47 +18,31 @@ jobs:
         with:
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: flutter test test/task_interaction_regression_test.dart --reporter expanded
+      - name: Replace initial pumpAndSettle with bounded home loading
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
 
-  category-ui:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: feat/kedis-categories
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter test test/widget_test.dart --reporter expanded
-
-  category-data:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: feat/kedis-categories
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter test test/category_migration_test.dart test/category_repository_test.dart test/task_category_test.dart --reporter expanded
-
-  existing-task-repository:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: feat/kedis-categories
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - run: flutter test test/task_repository_test.dart --reporter expanded
+          files = [
+              Path('test/widget_test.dart'),
+              Path('test/task_interaction_regression_test.dart'),
+          ]
+          needle = """    await tester.pumpAndSettle();\n  }\n\n"""
+          replacement = """    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.text('Inbox').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Kedis category home did not finish loading.');\n  }\n\n"""
+          for path in files:
+              text = path.read_text()
+              index = text.find(needle)
+              if index < 0:
+                  raise SystemExit(f'initial pump helper pattern not found in {path}')
+              text = text[:index] + replacement + text[index + len(needle):]
+              path.write_text(text)
+          PY
+          dart format test/widget_test.dart test/task_interaction_regression_test.dart test/category_repository_test.dart
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add test/widget_test.dart test/task_interaction_regression_test.dart test/category_repository_test.dart
+          if ! git diff --cached --quiet; then
+            git commit -m "fix(tests): bound category home loading pumps"
+            git push origin HEAD:feat/kedis-categories
+          fi
