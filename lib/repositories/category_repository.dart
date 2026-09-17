@@ -45,7 +45,10 @@ class CategoryRepository {
 
     final database = await _database.database;
     await _ensureNameAvailable(database, normalizedName);
-    final createdAt = DateTime.now().toUtc();
+    final createdAt = DateTime.fromMillisecondsSinceEpoch(
+      DateTime.now().millisecondsSinceEpoch,
+      isUtc: true,
+    );
     final id = await database.insert(KedisDatabase.categoriesTable, {
       'name': normalizedName,
       'color_value': colorValue,
