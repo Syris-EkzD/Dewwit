@@ -30,10 +30,15 @@ void main() {
     );
 
     final allCategories = await categories.getCategories();
+    final persistedSchool = allCategories.singleWhere(
+      (category) => category.id == school.id,
+    );
     expect(inbox.isSystem, isTrue);
     expect(inbox.name, 'Inbox');
     expect(school.name, 'School');
     expect(school.colorValue, 0xFF6750A4);
+    expect(school.microsecondsSinceEpoch % 1000, 0);
+    expect(persistedSchool.createdAt, school.createdAt);
     expect(programming.name, 'Programming');
     expect(allCategories.map((category) => category.id), [
       inbox.id,
@@ -70,10 +75,7 @@ void main() {
     expect(renamed?.name, 'Programming');
     expect(renamed?.id, category.id);
     expect(recolored?.colorValue, 0xFF006C4C);
-    expect(
-      recolored?.createdAt.millisecondsSinceEpoch,
-      category.createdAt.millisecondsSinceEpoch,
-    );
+    expect(recolored?.createdAt, category.createdAt);
   });
 
   test('prevents changes that would alter the system Inbox', () async {
