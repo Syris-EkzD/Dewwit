@@ -1,4 +1,4 @@
-name: UI Test Pump Fix
+name: Category Navigation Pump Fix
 
 on:
   pull_request:
@@ -18,31 +18,34 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Replace initial pumpAndSettle with bounded home loading
+      - name: Replace category navigation pumpAndSettle with bounded loading
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          files = [
-              Path('test/widget_test.dart'),
-              Path('test/task_interaction_regression_test.dart'),
-          ]
-          needle = """    await tester.pumpAndSettle();\n  }\n\n"""
-          replacement = """    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.text('Inbox').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Kedis category home did not finish loading.');\n  }\n\n"""
-          for path in files:
+          replacements = {
+              Path('test/widget_test.dart'): (
+                  """  Future<void> openCategory(WidgetTester tester, String name) async {\n    await tester.tap(find.text(name).first);\n    await tester.pumpAndSettle();\n  }\n""",
+                  """  Future<void> openCategory(WidgetTester tester, String name) async {\n    await tester.tap(find.text(name).first);\n    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.byTooltip('Add task').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Category task screen did not finish loading.');\n  }\n""",
+              ),
+              Path('test/task_interaction_regression_test.dart'): (
+                  """  Future<void> openInbox(WidgetTester tester) async {\n    await tester.tap(find.text('Inbox').first);\n    await tester.pumpAndSettle();\n  }\n""",
+                  """  Future<void> openInbox(WidgetTester tester) async {\n    await tester.tap(find.text('Inbox').first);\n    await tester.pump();\n    for (var attempt = 0; attempt < 40; attempt += 1) {\n      if (find.byTooltip('Add task').evaluate().isNotEmpty) {\n        return;\n      }\n      await tester.pump(const Duration(milliseconds: 50));\n    }\n    fail('Inbox task screen did not finish loading.');\n  }\n""",
+              ),
+          }
+
+          for path, (needle, replacement) in replacements.items():
               text = path.read_text()
-              index = text.find(needle)
-              if index < 0:
-                  raise SystemExit(f'initial pump helper pattern not found in {path}')
-              text = text[:index] + replacement + text[index + len(needle):]
-              path.write_text(text)
+              if needle not in text:
+                  raise SystemExit(f'category navigation helper pattern not found in {path}')
+              path.write_text(text.replace(needle, replacement, 1))
           PY
-          dart format test/widget_test.dart test/task_interaction_regression_test.dart test/category_repository_test.dart
+          dart format test/widget_test.dart test/task_interaction_regression_test.dart
           git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add test/widget_test.dart test/task_interaction_regression_test.dart test/category_repository_test.dart
+          git add test/widget_test.dart test/task_interaction_regression_test.dart
           if ! git diff --cached --quiet; then
-            git commit -m "fix(tests): bound category home loading pumps"
+            git commit -m "fix(tests): bound category navigation pumps"
             git push origin HEAD:feat/kedis-categories
           fi
