@@ -39,7 +39,14 @@ void main() {
         },
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (find.text('Inbox').evaluate().isNotEmpty) {
+        return;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('Kedis category home did not finish loading.');
   }
 
   Future<void> openInbox(WidgetTester tester) async {
