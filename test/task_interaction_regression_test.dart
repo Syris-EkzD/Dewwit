@@ -57,6 +57,7 @@ void main() {
       () => find.byTooltip('Add task').evaluate().isNotEmpty,
       'Inbox task screen did not finish loading.',
     );
+    await tester.pumpAndSettle();
   }
 
   testWidgets('multiline draft grows to keep its text visible', (
