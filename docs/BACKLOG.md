@@ -17,22 +17,27 @@ This file separates working behavior from approved Kedis V1 work and later ideas
 - [x] Reload task state when the application resumes
 - [x] System, Light, and Dark appearance support
 - [x] Mirror application appearance to the native widget
+- [x] User-created task categories
+- [x] Rename custom categories
+- [x] User-selected persistent category colors
+- [x] Safe category deletion that moves tasks to Inbox
+- [x] Durable Inbox/default category
+- [x] Migrate existing tasks into Inbox without data loss
+- [x] Create tasks within the current category
+- [x] Home quick capture into Inbox
+- [x] Category-card home screen with compact active-task previews
+- [x] Move tasks between existing categories
+- [x] Keep the Android widget global across categories
 
 ## Planned Kedis V1
 
 These items are active product direction but are not implemented yet.
 
-- [ ] User-created task categories
-- [ ] Rename categories
-- [ ] Safe category deletion behavior
-- [ ] User-selected category colors
-- [ ] Create tasks within the current category
-- [ ] Lightweight Inbox/default location for uncategorized tasks
 - [ ] Task acknowledgement separate from completion
 - [ ] Track appropriate acknowledgement or meaningful activity for active tasks
 - [ ] Derive stale-task attention state from activity/acknowledgement
 - [ ] Provide restrained local reminder notifications for stale tasks
-- [ ] Preserve low-friction quick capture as categories and reminders are added
+- [ ] Preserve low-friction capture as acknowledgement/reminders are added
 
 Kedis V1 stale-task reminders do not require mandatory due dates.
 
@@ -57,8 +62,12 @@ Potential future work may be reconsidered after real use creates a concrete need
 - Tags
 - Subtasks
 - Mandatory due dates
-- Additional advanced widget configuration beyond requirements created by Kedis V1
+- Drag-and-drop category or task ordering
+- Category nesting
+- Category icons
+- Widget category filtering or category cards
+- Additional advanced widget configuration without a concrete requirement
 
 ## Rule
 
-Do not implement planned or future items during an unrelated task simply because they appear here. Move one requirement at a time into an explicit implementation task, preserve the working checklist foundation, and update the documentation when behavior actually changes.
+Do not implement planned or future items during an unrelated task simply because they appear here. Move one requirement at a time into an explicit implementation task, preserve the working task/category/widget foundation, and update the documentation when behavior actually changes.

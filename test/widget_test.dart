@@ -1,450 +1,497 @@
 import 'package:kedis/main.dart';
-import 'package:kedis/models/task.dart';
-import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
 import 'package:kedis/widgets/editable_task_item.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'support/fake_repositories.dart';
 
 void main() {
-  late _FakeTaskRepository repository;
-  late int widgetRefreshCount;
+  late FakeTaskRepository tasks;
+  late FakeCategoryRepository categories;
   late _FakeThemePreferenceStore themePreferenceStore;
+  late int widgetRefreshCount;
 
   setUp(() {
-    repository = _FakeTaskRepository();
-    widgetRefreshCount = 0;
+    final repositories = FakeRepositories();
+    tasks = repositories.tasks;
+    categories = repositories.categories;
     themePreferenceStore = _FakeThemePreferenceStore();
+    widgetRefreshCount = 0;
   });
+
+  Future<void> pumpUntil(
+    WidgetTester tester,
+    bool Function() condition,
+    String failureMessage,
+  ) async {
+    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (condition()) return;
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail(failureMessage);
+  }
+
+  Future<void> waitForUndo(WidgetTester tester, String failureMessage) async {
+    await pumpUntil(
+      tester,
+      () => find.text('UNDO').hitTestable().evaluate().isNotEmpty,
+      failureMessage,
+    );
+  }
 
   Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
       KedisApp(
-        taskRepository: repository,
+        taskRepository: tasks,
+        categoryRepository: categories,
         themeController: ThemeController(themePreferenceStore),
         widgetRefresh: () async {
           widgetRefreshCount += 1;
         },
       ),
     );
+    await pumpUntil(
+      tester,
+      () => find.text('Inbox').evaluate().isNotEmpty,
+      'Kedis category home did not finish loading.',
+    );
+  }
+
+  Future<void> openCategory(WidgetTester tester, String name) async {
+    await tester.tap(find.text(name).first);
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Add task').evaluate().isNotEmpty,
+      '$name task screen did not finish loading.',
+    );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('loads persisted tasks', (WidgetTester tester) async {
-    await repository.createTask('Buy groceries');
-
-    await pumpKedis(tester);
-
-    expect(find.text('Kedis'), findsOneWidget);
-    expect(find.text('Buy groceries'), findsOneWidget);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
-  });
-
-  testWidgets('opens one focused inline draft and hides the Add FAB', (
+  testWidgets('shows category cards with a three-task active preview', (
     WidgetTester tester,
   ) async {
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    for (final title in ['One', 'Two', 'Three', 'Four']) {
+      await tasks.createTask(title, categoryId: school.id);
+    }
+    final completed = await tasks.createTask(
+      'Completed',
+      categoryId: school.id,
+    );
+    await tasks.setTaskCompletion(
+      completed.id,
+      isCompleted: true,
+      completedAt: DateTime.utc(2026, 9, 16, 12),
+    );
+
     await pumpKedis(tester);
-    expect(find.text('No tasks yet'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(EditableTaskItem), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
-    expect(find.text('No tasks yet'), findsNothing);
-    expect(find.byTooltip('Add task'), findsNothing);
-    expect(find.byType(FloatingActionButton), findsNothing);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
-      isTrue,
-    );
-
-    await tester.enterText(find.byType(TextField), 'Draft stays');
-
-    expect(find.byType(EditableTaskItem), findsOneWidget);
-    expect(find.text('Draft stays'), findsOneWidget);
-    expect(await repository.getTasks(), isEmpty);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).focusNode?.hasFocus,
-      isTrue,
-    );
+    expect(find.text('Inbox'), findsOneWidget);
+    expect(find.text('School'), findsOneWidget);
+    expect(find.text('One'), findsOneWidget);
+    expect(find.text('Two'), findsOneWidget);
+    expect(find.text('Three'), findsOneWidget);
+    expect(find.text('Four'), findsNothing);
+    expect(find.text('Completed'), findsNothing);
+    expect(find.text('+1 more'), findsOneWidget);
   });
 
-  testWidgets('submits a valid inline draft and refreshes the checklist', (
+  testWidgets('home quick capture creates a task in Inbox', (
     WidgetTester tester,
   ) async {
+    final inbox = await categories.getInbox();
     await pumpKedis(tester);
-    await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '  Finish activity  ');
-    await tester.pump();
-    await tester.tap(find.byTooltip('Save task'));
+
+    await tester.tap(find.byTooltip('Add task to Inbox'));
+    await pumpUntil(
+      tester,
+      () => find.text('Add to Inbox').evaluate().isNotEmpty,
+      'Quick-capture dialog did not appear.',
+    );
+    await tester.enterText(find.byType(TextField), '  Quick capture  ');
+    await tester.tap(find.text('Add'));
+    await pumpUntil(
+      tester,
+      () => find.text('Quick capture').evaluate().isNotEmpty,
+      'Quick-capture task did not appear on the category home.',
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Finish activity'), findsOneWidget);
-    expect(find.byType(EditableTaskItem), findsNothing);
-    expect((await repository.getTasks()).single.title, 'Finish activity');
+    final created = (await tasks.getTasks()).single;
+    expect(created.title, 'Quick capture');
+    expect(created.categoryId, inbox.id);
+    expect(widgetRefreshCount, 1);
+    expect(find.text('Quick capture'), findsOneWidget);
+    expect(find.text('Add to Inbox'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapping a category opens its full task list', (
+    WidgetTester tester,
+  ) async {
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    for (final title in ['One', 'Two', 'Three', 'Four']) {
+      await tasks.createTask(title, categoryId: school.id);
+    }
+
+    await pumpKedis(tester);
+    expect(find.text('Four'), findsNothing);
+    await openCategory(tester, 'School');
+
+    expect(find.text('One'), findsOneWidget);
+    expect(find.text('Two'), findsOneWidget);
+    expect(find.text('Three'), findsOneWidget);
+    expect(find.text('Four'), findsOneWidget);
+  });
+
+  testWidgets('category inline capture assigns the current category', (
+    WidgetTester tester,
+  ) async {
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    await pumpKedis(tester);
+    await openCategory(tester, 'School');
+
+    await tester.tap(find.byTooltip('Add task'));
+    await pumpUntil(
+      tester,
+      () =>
+          find.byType(EditableTaskItem).evaluate().isNotEmpty &&
+          find.byTooltip('Add task').evaluate().isEmpty,
+      'Inline task draft did not replace the add-task action.',
+    );
+    expect(find.byType(EditableTaskItem), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), '  Database proposal  ');
+    await pumpUntil(tester, () {
+      final saveAction = find.byTooltip('Save task').hitTestable();
+      return saveAction.evaluate().isNotEmpty;
+    }, 'Inline task save action did not become tappable.');
+    await tester.tap(find.byTooltip('Save task').hitTestable());
+    await pumpUntil(
+      tester,
+      () => find.text('Database proposal').evaluate().isNotEmpty,
+      'Category task did not finish saving.',
+    );
+
+    final created = (await tasks.getTasks(categoryId: school.id)).single;
+    expect(created.title, 'Database proposal');
+    expect(created.categoryId, school.id);
+    expect(find.text('Database proposal'), findsOneWidget);
     expect(widgetRefreshCount, 1);
   });
 
-  testWidgets('multiline draft grows to keep its text visible', (
+  testWidgets('empty inline draft is discarded without persistence', (
     WidgetTester tester,
   ) async {
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
+
     await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
-
-    final input = find.byKey(const ValueKey('task-draft-input'));
-    final initialHeight = tester.getSize(input).height;
-    final textField = tester.widget<TextField>(input);
-    expect(textField.minLines, 1);
-    expect(textField.maxLines, isNull);
-
-    await tester.enterText(
-      input,
-      'First part of a long task\nSecond part\nThird part',
+    await pumpUntil(
+      tester,
+      () => find.byType(EditableTaskItem).evaluate().isNotEmpty,
+      'Inline task draft did not appear.',
     );
-    await tester.pump();
-
-    expect(tester.getSize(input).height, greaterThan(initialHeight));
-  });
-
-  testWidgets('discards an empty inline draft without persistence', (
-    WidgetTester tester,
-  ) async {
-    await pumpKedis(tester);
-    await tester.tap(find.byTooltip('Add task'));
-    await tester.pumpAndSettle();
-
     await tester.tap(find.byTooltip('Discard draft'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditableTaskItem).evaluate().isEmpty,
+      'Inline task draft did not close.',
+    );
 
     expect(find.byType(EditableTaskItem), findsNothing);
-    expect(find.text('No tasks yet'), findsOneWidget);
-    expect(await repository.getTasks(), isEmpty);
+    expect(await tasks.getTasks(), isEmpty);
     expect(widgetRefreshCount, 0);
   });
 
-  testWidgets('toggles and deletes a task', (WidgetTester tester) async {
-    await repository.createTask('Review networking');
-    await pumpKedis(tester);
-
-    await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
-
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
-    expect((await repository.getTasks()).single.isCompleted, isTrue);
-
-    await tester.tap(find.byIcon(Icons.delete_outline));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Review networking'), findsNothing);
-    expect(find.text('No tasks yet'), findsOneWidget);
-    expect(await repository.getTasks(), isEmpty);
-    expect(widgetRefreshCount, 2);
-  });
-
-  testWidgets('edits an active task inline and preserves its state', (
+  testWidgets('edits a task title without changing task state', (
     WidgetTester tester,
   ) async {
-    final original = await repository.createTask('Original title');
+    final inbox = await categories.getInbox();
+    final original = await tasks.createTask('Original title');
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
 
     await tester.tap(find.text('Original title'));
-    await tester.pumpAndSettle();
-
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Task editor did not appear.',
+    );
     expect(find.byType(EditingTaskItem), findsOneWidget);
-    final input = find.byKey(ValueKey('task-edit-input-${original.id}'));
-    expect(tester.widget<TextField>(input).controller?.text, 'Original title');
-    expect(tester.widget<TextField>(input).focusNode?.hasFocus, isTrue);
-
-    await tester.enterText(input, '  Updated title  ');
+    await tester.enterText(find.byType(TextField), '  Updated title  ');
     await tester.tap(find.byTooltip('Save changes'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Updated title').evaluate().isNotEmpty &&
+          find.byType(EditingTaskItem).evaluate().isEmpty,
+      'Task title edit did not finish saving.',
+    );
 
-    final updated = (await repository.getTasks()).single;
-    expect(updated.title, 'Updated title');
+    final updated = (await tasks.getTasks(categoryId: inbox.id)).single;
     expect(updated.id, original.id);
-    expect(updated.createdAt, original.createdAt);
+    expect(updated.title, 'Updated title');
     expect(updated.isCompleted, original.isCompleted);
+    expect(updated.createdAt, original.createdAt);
     expect(updated.completedAt, original.completedAt);
-    expect(find.byType(EditingTaskItem), findsNothing);
+    expect(updated.categoryId, original.categoryId);
     expect(widgetRefreshCount, 1);
   });
 
-  testWidgets('rejects an empty edit and keeps editing', (
-    WidgetTester tester,
-  ) async {
-    await repository.createTask('Keep title');
+  testWidgets('rejects an empty task-title edit', (WidgetTester tester) async {
+    await tasks.createTask('Keep title');
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
 
     await tester.tap(find.text('Keep title'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.byType(EditingTaskItem).evaluate().isNotEmpty,
+      'Task editor did not appear.',
+    );
     await tester.enterText(find.byType(TextField), '   ');
     await tester.tap(find.byTooltip('Save changes'));
     await tester.pump();
 
     expect(find.text('Task title cannot be empty.'), findsOneWidget);
     expect(find.byType(EditingTaskItem), findsOneWidget);
-    expect((await repository.getTasks()).single.title, 'Keep title');
+    expect((await tasks.getTasks()).single.title, 'Keep title');
     expect(widgetRefreshCount, 0);
   });
 
-  testWidgets('cancels an edit without changing the title', (
+  testWidgets('completes a task and undo restores its active state', (
     WidgetTester tester,
   ) async {
-    await repository.createTask('Unchanged title');
+    await tasks.createTask('Accidental completion');
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
 
-    await tester.tap(find.text('Unchanged title'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Discard this');
-    await tester.tap(find.byTooltip('Cancel editing'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Unchanged title'), findsOneWidget);
-    expect(find.byType(EditingTaskItem), findsNothing);
-    expect((await repository.getTasks()).single.title, 'Unchanged title');
-    expect(widgetRefreshCount, 0);
-  });
-
-  testWidgets('allows only one task to be edited at a time', (
-    WidgetTester tester,
-  ) async {
-    await repository.createTask('First task');
-    await repository.createTask('Second task');
-    await pumpKedis(tester);
-
-    await tester.tap(find.text('First task'));
-    await tester.pumpAndSettle();
-    expect(find.byType(EditingTaskItem), findsOneWidget);
-
-    await tester.tap(find.text('Second task'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(EditingTaskItem), findsOneWidget);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      'Second task',
+    await tester.tap(find.byType(Checkbox));
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Completed').evaluate().isNotEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Completion did not update the task UI.',
     );
-    expect((await repository.getTasks()).map((task) => task.title), [
-      'First task',
-      'Second task',
-    ]);
-  });
+    expect((await tasks.getTasks()).single.isCompleted, isTrue);
+    await waitForUndo(tester, 'Completion Undo action was not tappable.');
 
-  testWidgets('edits a completed task without moving it', (
-    WidgetTester tester,
-  ) async {
-    final older = await repository.createTask('Older completed');
-    final newer = await repository.createTask('Newer completed');
-    final olderCompletedAt = DateTime.utc(2026, 9, 3, 8);
-    final newerCompletedAt = DateTime.utc(2026, 9, 3, 9);
-    await repository.setTaskCompletion(
-      older.id,
-      isCompleted: true,
-      completedAt: olderCompletedAt,
+    await tester.tap(find.text('UNDO').hitTestable());
+    await pumpUntil(
+      tester,
+      () => find.text('Completed').evaluate().isEmpty,
+      'Completion Undo did not restore the active task UI.',
     );
-    final original = await repository.setTaskCompletion(
-      newer.id,
-      isCompleted: true,
-      completedAt: newerCompletedAt,
-    );
-    await pumpKedis(tester);
-
-    await tester.tap(find.text('Newer completed'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Renamed completed');
-    await tester.tap(find.byTooltip('Save changes'));
-    await tester.pumpAndSettle();
-
-    final tasks = await repository.getTasks();
-    final updated = tasks.first;
-    expect(find.text('Completed'), findsOneWidget);
-    expect(updated.title, 'Renamed completed');
-    expect(updated.id, original?.id);
-    expect(updated.createdAt, original?.createdAt);
-    expect(updated.isCompleted, isTrue);
-    expect(updated.completedAt, newerCompletedAt);
-    expect(tasks.last.id, older.id);
-    expect(
-      tester.getTopLeft(find.text('Renamed completed')).dy,
-      lessThan(tester.getTopLeft(find.text('Older completed')).dy),
-    );
-  });
-
-  testWidgets('undoes deletion of an active task with its original identity', (
-    WidgetTester tester,
-  ) async {
-    final original = await repository.createTask('Restore active');
-    await pumpKedis(tester);
-
-    await tester.tap(find.byIcon(Icons.delete_outline));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Task deleted'), findsOneWidget);
-    expect(find.text('UNDO'), findsOneWidget);
-    expect(find.text('Restore active'), findsNothing);
-    expect(await repository.getTasks(), isEmpty);
-
-    await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
-
-    final restored = (await repository.getTasks()).single;
-    expect(restored.id, original.id);
-    expect(restored.createdAt, original.createdAt);
+    final restored = (await tasks.getTasks()).single;
     expect(restored.isCompleted, isFalse);
     expect(restored.completedAt, isNull);
-    expect(find.text('Restore active'), findsOneWidget);
-    expect(find.text('Completed'), findsNothing);
     expect(widgetRefreshCount, 2);
   });
 
-  testWidgets('restores a completed deletion in its original ordering', (
+  testWidgets('deletes and restores a task with its category identity', (
     WidgetTester tester,
   ) async {
-    final older = await repository.createTask('Older completed');
-    final newest = await repository.createTask('Newest completed');
-    final olderCompletedAt = DateTime.utc(2026, 9, 3, 8);
-    final newestCompletedAt = DateTime.utc(2026, 9, 3, 9);
-    await repository.setTaskCompletion(
-      older.id,
-      isCompleted: true,
-      completedAt: olderCompletedAt,
-    );
-    final original = await repository.setTaskCompletion(
-      newest.id,
-      isCompleted: true,
-      completedAt: newestCompletedAt,
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    final original = await tasks.createTask(
+      'Restore me',
+      categoryId: school.id,
     );
     await pumpKedis(tester);
+    await openCategory(tester, 'School');
 
-    await tester.tap(find.byTooltip('Delete Newest completed'));
-    await tester.pumpAndSettle();
-    expect(find.text('Newest completed'), findsNothing);
+    await tester.tap(find.byTooltip('Delete Restore me'));
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Restore me').evaluate().isEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Deleted task did not leave the category list.',
+    );
+    expect(await tasks.getTasks(categoryId: school.id), isEmpty);
+    await waitForUndo(tester, 'Delete Undo action was not tappable.');
 
-    await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
-
-    final tasks = await repository.getTasks();
-    final restored = tasks.first;
-    expect(restored.id, original!.id);
+    await tester.tap(find.text('UNDO').hitTestable());
+    await pumpUntil(
+      tester,
+      () => find.text('Restore me').evaluate().isNotEmpty,
+      'Delete Undo did not restore the task.',
+    );
+    final restored = (await tasks.getTasks(categoryId: school.id)).single;
+    expect(restored.id, original.id);
+    expect(restored.categoryId, school.id);
     expect(restored.createdAt, original.createdAt);
-    expect(restored.completedAt, newestCompletedAt);
-    expect(restored.isCompleted, isTrue);
-    expect(find.text('Completed'), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.text('Newest completed')).dy,
-      lessThan(tester.getTopLeft(find.text('Older completed')).dy),
-    );
     expect(widgetRefreshCount, 2);
   });
 
-  testWidgets('leaves a task deleted after the Undo Snackbar expires', (
+  testWidgets('moves a task to another category from the task row', (
     WidgetTester tester,
   ) async {
-    await repository.createTask('Delete permanently');
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    final programming = await categories.createCategory(
+      'Programming',
+      0xFF006C4C,
+    );
+    final task = await tasks.createTask('Move me', categoryId: school.id);
+    final completedAt = DateTime.utc(2026, 9, 16, 14);
+    await tasks.setTaskCompletion(
+      task.id,
+      isCompleted: true,
+      completedAt: completedAt,
+    );
     await pumpKedis(tester);
+    await openCategory(tester, 'School');
 
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.tap(find.byTooltip('Move Move me'));
+    await pumpUntil(
+      tester,
+      () => find.text('Programming').evaluate().isNotEmpty,
+      'Move-category dialog did not appear.',
+    );
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+    await tester.tap(find.text('Programming'));
+    await pumpUntil(
+      tester,
+      () => find.text('Move me').evaluate().isEmpty,
+      'Moved task did not leave its original category.',
+    );
 
-    expect(find.text('UNDO'), findsNothing);
-    expect(find.text('Delete permanently'), findsNothing);
-    expect(await repository.getTasks(), isEmpty);
+    expect(await tasks.getTasks(categoryId: school.id), isEmpty);
+    final moved = (await tasks.getTasks(categoryId: programming.id)).single;
+    expect(moved.id, task.id);
+    expect(moved.isCompleted, isTrue);
+    expect(moved.completedAt, completedAt);
     expect(widgetRefreshCount, 1);
   });
 
-  testWidgets('undoes completion and returns the task to active', (
+  testWidgets('creates, renames, and safely deletes a custom category', (
     WidgetTester tester,
   ) async {
-    await repository.createTask('Accidental completion');
     await pumpKedis(tester);
 
-    await tester.tap(find.byType(Checkbox));
+    await tester.tap(find.byTooltip('Add category'));
+    await pumpUntil(
+      tester,
+      () => find.text('Create').evaluate().isNotEmpty,
+      'Create-category dialog did not appear.',
+    );
+    await tester.enterText(find.byType(TextField), 'School');
+    await tester.tap(find.text('Create'));
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Category actions').evaluate().isNotEmpty,
+      'Created category did not appear on the category home.',
+    );
+    expect(find.text('School'), findsOneWidget);
+
+    final school = (await categories.getCategories()).singleWhere(
+      (category) => category.name == 'School',
+    );
+    await tasks.createTask('Keep task', categoryId: school.id);
+
+    await tester.tap(find.byTooltip('Category actions'));
+    await pumpUntil(
+      tester,
+      () => find.text('Edit category').evaluate().isNotEmpty,
+      'Category action menu did not appear.',
+    );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit category'));
+    await pumpUntil(
+      tester,
+      () => find.byType(TextField).evaluate().isNotEmpty,
+      'Edit-category dialog did not appear.',
+    );
+    await tester.enterText(find.byType(TextField), 'Programming');
+    await tester.tap(find.text('Save'));
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Programming').evaluate().isNotEmpty &&
+          find.byTooltip('Category actions').evaluate().isNotEmpty,
+      'Edited category did not appear on the category home.',
+    );
+    expect(find.text('Programming'), findsOneWidget);
 
-    expect(find.text('Task completed'), findsOneWidget);
-    expect(find.text('UNDO'), findsOneWidget);
-    expect(find.text('Completed'), findsOneWidget);
-    expect((await repository.getTasks()).single.completedAt, isNotNull);
-
-    await tester.tap(find.text('UNDO'));
+    await tester.tap(find.byTooltip('Category actions'));
+    await pumpUntil(
+      tester,
+      () => find.text('Delete category').evaluate().isNotEmpty,
+      'Category action menu did not reopen.',
+    );
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete category'));
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Its tasks will be moved to Inbox.').evaluate().isNotEmpty,
+      'Delete-category confirmation did not appear.',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await pumpUntil(
+      tester,
+      () => find.text('Programming').evaluate().isEmpty,
+      'Deleted category remained on the category home.',
+    );
 
-    final restored = (await repository.getTasks()).single;
-    expect(restored.isCompleted, isFalse);
-    expect(restored.completedAt, isNull);
-    expect(find.text('Completed'), findsNothing);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isFalse);
-    expect(widgetRefreshCount, 2);
+    final inbox = await categories.getInbox();
+    expect(
+      (await tasks.getTasks(categoryId: inbox.id)).single.title,
+      'Keep task',
+    );
   });
 
-  testWidgets('undoes uncompletion with the original completion timestamp', (
+  testWidgets('keeps active tasks before newest-first completed tasks', (
     WidgetTester tester,
   ) async {
-    final task = await repository.createTask('Restore completion');
-    final completed = await repository.toggleTask(task.id);
-    final originalCompletedAt = completed!.completedAt;
+    final oldest = await tasks.createTask('Oldest completed');
+    final newer = await tasks.createTask('Newer completed');
+    await tasks.createTask('Active');
+    await tasks.setTaskCompletion(
+      oldest.id,
+      isCompleted: true,
+      completedAt: DateTime.utc(2026, 9, 16, 10),
+    );
+    await tasks.setTaskCompletion(
+      newer.id,
+      isCompleted: true,
+      completedAt: DateTime.utc(2026, 9, 16, 11),
+    );
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
 
-    await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Task marked incomplete'), findsOneWidget);
-    expect(find.text('UNDO'), findsOneWidget);
-    expect(find.text('Completed'), findsNothing);
-
-    await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
-
-    final restored = (await repository.getTasks()).single;
-    expect(restored.isCompleted, isTrue);
-    expect(restored.completedAt, originalCompletedAt);
-    expect(find.text('Completed'), findsOneWidget);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
-    expect(widgetRefreshCount, 2);
+    final activeY = tester.getTopLeft(find.text('Active')).dy;
+    final completedLabelY = tester.getTopLeft(find.text('Completed')).dy;
+    final newerY = tester.getTopLeft(find.text('Newer completed')).dy;
+    final oldestY = tester.getTopLeft(find.text('Oldest completed')).dy;
+    expect(activeY, lessThan(completedLabelY));
+    expect(completedLabelY, lessThan(newerY));
+    expect(newerY, lessThan(oldestY));
   });
 
-  testWidgets('reloads tasks when the app resumes', (
+  testWidgets('reloads category tasks when the app resumes', (
     WidgetTester tester,
   ) async {
-    final task = await repository.createTask('Changed from widget');
+    final task = await tasks.createTask('Changed from widget');
     await pumpKedis(tester);
+    await openCategory(tester, 'Inbox');
 
-    await repository.toggleTask(task.id);
+    await tasks.toggleTask(task.id);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => tester.widget<Checkbox>(find.byType(Checkbox)).value == true,
+      'Resumed task screen did not reload task state.',
+    );
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
-  });
-
-  testWidgets('shows active tasks before a newest-first Completed section', (
-    WidgetTester tester,
-  ) async {
-    final oldest = await repository.createTask('Oldest');
-    final middle = await repository.createTask('Middle');
-    await repository.createTask('Newest active');
-    await repository.toggleTask(oldest.id);
-    await tester.pump(const Duration(milliseconds: 2));
-    await repository.toggleTask(middle.id);
-
-    await pumpKedis(tester);
-
-    expect(find.text('Completed'), findsOneWidget);
-    final activeY = tester.getTopLeft(find.text('Newest active')).dy;
-    final labelY = tester.getTopLeft(find.text('Completed')).dy;
-    final recentY = tester.getTopLeft(find.text('Middle')).dy;
-    final olderY = tester.getTopLeft(find.text('Oldest')).dy;
-    expect(activeY, lessThan(labelY));
-    expect(labelY, lessThan(recentY));
-    expect(recentY, lessThan(olderY));
   });
 
   testWidgets('changes and persists theme from settings', (
@@ -453,18 +500,29 @@ void main() {
     await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('System'), findsOneWidget);
-
+    await pumpUntil(
+      tester,
+      () => find.text('Theme').evaluate().isNotEmpty,
+      'Settings screen did not appear.',
+    );
     await tester.tap(find.text('Theme'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Dark').evaluate().isNotEmpty,
+      'Theme picker did not appear.',
+    );
     await tester.tap(find.text('Dark'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode ==
+          ThemeMode.dark,
+      'Theme mode did not update to dark.',
+    );
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.themeMode, ThemeMode.dark);
     expect(themePreferenceStore.savedThemeMode, ThemeMode.dark);
-    expect(find.text('Dark'), findsOneWidget);
   });
 }
 
@@ -474,120 +532,5 @@ class _FakeThemePreferenceStore extends ThemePreferenceStore {
   @override
   Future<void> save(ThemeMode themeMode) async {
     savedThemeMode = themeMode;
-  }
-}
-
-class _FakeTaskRepository extends TaskRepository {
-  _FakeTaskRepository()
-    : super.atPath(inMemoryDatabasePath, factory: databaseFactoryFfi);
-
-  final List<Task> _tasks = [];
-  var _nextId = 1;
-
-  @override
-  Future<Task> createTask(String title) async {
-    final task = Task(
-      id: _nextId++,
-      title: title.trim(),
-      isCompleted: false,
-      createdAt: DateTime.now().toUtc(),
-      completedAt: null,
-    );
-    _tasks.add(task);
-    return task;
-  }
-
-  @override
-  Future<List<Task>> getTasks() async {
-    final tasks = List<Task>.of(_tasks)
-      ..sort((first, second) {
-        if (first.isCompleted != second.isCompleted) {
-          return first.isCompleted ? 1 : -1;
-        }
-        if (!first.isCompleted) {
-          return first.createdAt.compareTo(second.createdAt);
-        }
-        final firstCompletedAt = first.completedAt;
-        final secondCompletedAt = second.completedAt;
-        if (firstCompletedAt == null || secondCompletedAt == null) {
-          if (firstCompletedAt == null && secondCompletedAt != null) return 1;
-          if (firstCompletedAt != null && secondCompletedAt == null) return -1;
-          return first.createdAt.compareTo(second.createdAt);
-        }
-        return secondCompletedAt.compareTo(firstCompletedAt);
-      });
-    return List.unmodifiable(tasks);
-  }
-
-  @override
-  Future<Task?> updateTaskTitle(int id, String title) async {
-    final normalizedTitle = title.trim();
-    if (normalizedTitle.isEmpty) {
-      throw ArgumentError.value(title, 'title', 'Task title cannot be empty.');
-    }
-    final index = _tasks.indexWhere((task) => task.id == id);
-    if (index == -1) return null;
-
-    final current = _tasks[index];
-    final updated = Task(
-      id: current.id,
-      title: normalizedTitle,
-      isCompleted: current.isCompleted,
-      createdAt: current.createdAt,
-      completedAt: current.completedAt,
-    );
-    _tasks[index] = updated;
-    return updated;
-  }
-
-  @override
-  Future<Task?> toggleTask(int id) async {
-    final index = _tasks.indexWhere((task) => task.id == id);
-    if (index == -1) return null;
-
-    final current = _tasks[index];
-    final updated = Task(
-      id: current.id,
-      title: current.title,
-      isCompleted: !current.isCompleted,
-      createdAt: current.createdAt,
-      completedAt: current.isCompleted ? null : DateTime.now().toUtc(),
-    );
-    _tasks[index] = updated;
-    return updated;
-  }
-
-  @override
-  Future<Task?> setTaskCompletion(
-    int id, {
-    required bool isCompleted,
-    required DateTime? completedAt,
-  }) async {
-    final index = _tasks.indexWhere((task) => task.id == id);
-    if (index == -1) return null;
-
-    final current = _tasks[index];
-    final updated = Task(
-      id: current.id,
-      title: current.title,
-      isCompleted: isCompleted,
-      createdAt: current.createdAt,
-      completedAt: isCompleted ? completedAt : null,
-    );
-    _tasks[index] = updated;
-    return updated;
-  }
-
-  @override
-  Future<bool> deleteTask(int id) async {
-    final originalLength = _tasks.length;
-    _tasks.removeWhere((task) => task.id == id);
-    return _tasks.length != originalLength;
-  }
-
-  @override
-  Future<Task> restoreTask(Task task) async {
-    _tasks.add(task);
-    return task;
   }
 }

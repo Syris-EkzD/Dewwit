@@ -5,6 +5,7 @@ class Task {
     required this.isCompleted,
     required this.createdAt,
     required this.completedAt,
+    required this.categoryId,
   });
 
   final int id;
@@ -12,6 +13,7 @@ class Task {
   final bool isCompleted;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final int categoryId;
 
   factory Task.fromMap(Map<String, Object?> map) {
     return Task(
@@ -29,6 +31,7 @@ class Task {
         ),
         _ => null,
       },
+      categoryId: map['category_id']! as int,
     );
   }
 }

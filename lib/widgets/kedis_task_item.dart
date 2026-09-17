@@ -8,6 +8,7 @@ class KedisTaskItem extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
+    this.onMove,
     super.key,
   });
 
@@ -15,6 +16,7 @@ class KedisTaskItem extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback? onMove;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +59,23 @@ class KedisTaskItem extends StatelessWidget {
             ),
           ),
         ),
-        trailing: IconButton(
-          onPressed: onDelete,
-          tooltip: 'Delete ${task.title}',
-          icon: const Icon(Icons.delete_outline),
-          color: colorScheme.onSurfaceVariant,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onMove != null)
+              IconButton(
+                onPressed: onMove,
+                tooltip: 'Move ${task.title}',
+                icon: const Icon(Icons.swap_horiz),
+                color: colorScheme.onSurfaceVariant,
+              ),
+            IconButton(
+              onPressed: onDelete,
+              tooltip: 'Delete ${task.title}',
+              icon: const Icon(Icons.delete_outline),
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
         ),
       ),
     );
