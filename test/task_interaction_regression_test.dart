@@ -32,10 +32,7 @@ void main() {
     fail(failureMessage);
   }
 
-  Future<void> waitForUndo(
-    WidgetTester tester,
-    String failureMessage,
-  ) async {
+  Future<void> waitForUndo(WidgetTester tester, String failureMessage) async {
     await pumpUntil(
       tester,
       () => find.text('UNDO').hitTestable().evaluate().isNotEmpty,
