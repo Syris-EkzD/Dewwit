@@ -119,12 +119,15 @@ void main() {
       () => find.text('Quick capture').evaluate().isNotEmpty,
       'Quick-capture task did not appear on the category home.',
     );
+    await tester.pumpAndSettle();
 
     final created = (await tasks.getTasks()).single;
     expect(created.title, 'Quick capture');
     expect(created.categoryId, inbox.id);
     expect(widgetRefreshCount, 1);
     expect(find.text('Quick capture'), findsOneWidget);
+    expect(find.text('Add to Inbox'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('tapping a category opens its full task list', (
