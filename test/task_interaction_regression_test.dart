@@ -223,7 +223,16 @@ void main() {
           find.text('UNDO').evaluate().isNotEmpty,
       'Deleted task did not leave the list or expose Undo.',
     );
-    await tester.pump(const Duration(seconds: 5));
+    await waitForUndo(tester, 'Delete Undo action was not tappable.');
+    await pumpUntil(
+      tester,
+      () =>
+          tester.widget<SnackBar>(find.byType(SnackBar)).animation?.status ==
+          AnimationStatus.completed,
+      'Delete Undo snackbar did not finish appearing.',
+    );
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    await tester.pump(snackBar.duration);
     await pumpUntil(
       tester,
       () => find.text('UNDO').evaluate().isEmpty,
