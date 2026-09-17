@@ -163,7 +163,12 @@ void main() {
     expect(find.byType(EditableTaskItem), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
-    await tester.tap(find.byTooltip('Save task'));
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('Save task').hitTestable().evaluate().isNotEmpty,
+      'Inline task save action did not become tappable.',
+    );
+    await tester.tap(find.byTooltip('Save task').hitTestable());
     await pumpUntil(
       tester,
       () => find.text('Database proposal').evaluate().isNotEmpty,
