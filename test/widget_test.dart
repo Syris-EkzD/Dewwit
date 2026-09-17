@@ -60,6 +60,7 @@ void main() {
       () => find.byTooltip('Add task').evaluate().isNotEmpty,
       '$name task screen did not finish loading.',
     );
+    await tester.pumpAndSettle();
   }
 
   testWidgets('shows category cards with a three-task active preview', (
@@ -334,6 +335,7 @@ void main() {
       () => find.text('Programming').evaluate().isNotEmpty,
       'Move-category dialog did not appear.',
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Programming'));
     await pumpUntil(
       tester,
@@ -380,6 +382,7 @@ void main() {
       () => find.text('Edit category').evaluate().isNotEmpty,
       'Category action menu did not appear.',
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Edit category'));
     await pumpUntil(
       tester,
@@ -403,6 +406,7 @@ void main() {
       () => find.text('Delete category').evaluate().isNotEmpty,
       'Category action menu did not reopen.',
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Delete category'));
     await pumpUntil(
       tester,
@@ -410,6 +414,7 @@ void main() {
           find.text('Its tasks will be moved to Inbox.').evaluate().isNotEmpty,
       'Delete-category confirmation did not appear.',
     );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await pumpUntil(
       tester,
