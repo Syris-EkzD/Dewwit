@@ -115,17 +115,9 @@ class FakeTaskRepository extends TaskRepository {
 
     final Task updated;
     if (current.isCompleted) {
-      updated = _copyTask(
-        current,
-        isCompleted: false,
-        clearCompletedAt: true,
-      );
+      updated = _copyTask(current, isCompleted: false, clearCompletedAt: true);
     } else {
-      updated = _copyTask(
-        current,
-        isCompleted: true,
-        completedAt: _now(),
-      );
+      updated = _copyTask(current, isCompleted: true, completedAt: _now());
     }
     _store.tasks[id] = updated;
     return updated;
@@ -288,10 +280,7 @@ class FakeCategoryRepository extends CategoryRepository {
       if (task.categoryId != id) {
         continue;
       }
-      _store.tasks[entry.key] = _copyTask(
-        task,
-        categoryId: _store.inbox.id,
-      );
+      _store.tasks[entry.key] = _copyTask(task, categoryId: _store.inbox.id);
       movedTasks += 1;
     }
     _store.categories.remove(id);
@@ -304,23 +293,14 @@ class FakeCategoryRepository extends CategoryRepository {
   String _normalizeName(String name) {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) {
-      throw ArgumentError.value(
-        name,
-        'name',
-        'Category name cannot be empty.',
-      );
+      throw ArgumentError.value(name, 'name', 'Category name cannot be empty.');
     }
     return normalizedName;
   }
 
   void _validateColorValue(int colorValue) {
     if (colorValue < 0 || colorValue > 0xFFFFFFFF) {
-      throw RangeError.range(
-        colorValue,
-        0,
-        0xFFFFFFFF,
-        'colorValue',
-      );
+      throw RangeError.range(colorValue, 0, 0xFFFFFFFF, 'colorValue');
     }
   }
 
