@@ -14,8 +14,8 @@ class FakeRepositories {
   late final FakeTaskRepository tasks;
 }
 
-class FakeTaskRepository extends TaskRepository {
-  FakeTaskRepository._(this._store) : super();
+class FakeTaskRepository implements TaskRepository {
+  FakeTaskRepository._(this._store);
 
   final _FakeRepositoryStore _store;
 
@@ -193,8 +193,8 @@ class FakeTaskRepository extends TaskRepository {
   }
 }
 
-class FakeCategoryRepository extends CategoryRepository {
-  FakeCategoryRepository._(this._store) : super();
+class FakeCategoryRepository implements CategoryRepository {
+  FakeCategoryRepository._(this._store);
 
   final _FakeRepositoryStore _store;
 
