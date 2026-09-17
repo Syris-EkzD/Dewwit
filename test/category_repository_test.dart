@@ -37,7 +37,7 @@ void main() {
     expect(inbox.name, 'Inbox');
     expect(school.name, 'School');
     expect(school.colorValue, 0xFF6750A4);
-    expect(school.microsecondsSinceEpoch % 1000, 0);
+    expect(school.createdAt.microsecondsSinceEpoch % 1000, 0);
     expect(persistedSchool.createdAt, school.createdAt);
     expect(programming.name, 'Programming');
     expect(allCategories.map((category) => category.id), [
