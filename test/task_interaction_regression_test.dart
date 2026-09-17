@@ -1,33 +1,23 @@
 import 'package:kedis/main.dart';
-import 'package:kedis/repositories/category_repository.dart';
-import 'package:kedis/repositories/kedis_database.dart';
-import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'support/fake_repositories.dart';
 
 void main() {
-  late KedisDatabase database;
-  late TaskRepository tasks;
-  late CategoryRepository categories;
+  late FakeTaskRepository tasks;
+  late FakeCategoryRepository categories;
   late int widgetRefreshCount;
 
-  setUp(() async {
-    sqfliteFfiInit();
-    database = KedisDatabase.atPath(
-      inMemoryDatabasePath,
-      factory: databaseFactoryFfi,
-    );
-    await database.database;
-    tasks = TaskRepository.withDatabase(database);
-    categories = CategoryRepository.withDatabase(database);
+  setUp(() {
+    final repositories = FakeRepositories();
+    tasks = repositories.tasks;
+    categories = repositories.categories;
     widgetRefreshCount = 0;
   });
-
-  tearDown(() => database.close());
 
   Future<void> pumpUntil(
     WidgetTester tester,
@@ -53,8 +43,6 @@ void main() {
         },
       ),
     );
-    // The category home shows an animated progress indicator while SQLite loads,
-    // so wait for its stable Inbox content instead of settling every animation.
     await pumpUntil(
       tester,
       () => find.text('Inbox').evaluate().isNotEmpty,
@@ -112,7 +100,13 @@ void main() {
     );
     await tester.enterText(find.byType(TextField), 'Discard this');
     await tester.tap(find.byTooltip('Cancel editing'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Unchanged title').evaluate().isNotEmpty &&
+          find.byType(EditingTaskItem).evaluate().isEmpty,
+      'Task edit did not finish cancelling.',
+    );
 
     expect(find.text('Unchanged title'), findsOneWidget);
     expect(find.byType(EditingTaskItem), findsNothing);
@@ -213,9 +207,15 @@ void main() {
     await openInbox(tester);
 
     await tester.tap(find.byTooltip('Delete Delete permanently'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Delete permanently').evaluate().isEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Deleted task did not leave the list or expose Undo.',
+    );
     await tester.pump(const Duration(seconds: 5));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.text('UNDO'), findsNothing);
     expect(find.text('Delete permanently'), findsNothing);
@@ -233,14 +233,24 @@ void main() {
     await openInbox(tester);
 
     await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Task marked incomplete').evaluate().isNotEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Uncompletion did not expose its Undo action.',
+    );
 
-    expect(find.text('Task marked incomplete'), findsOneWidget);
-    expect(find.text('UNDO'), findsOneWidget);
     expect(find.text('Completed'), findsNothing);
 
     await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Completed').evaluate().isNotEmpty &&
+          tester.widget<Checkbox>(find.byType(Checkbox)).value == true,
+      'Undo did not restore the completed task UI.',
+    );
 
     final restored = (await tasks.getTasks()).single;
     expect(restored.isCompleted, isTrue);

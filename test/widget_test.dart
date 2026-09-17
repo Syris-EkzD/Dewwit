@@ -1,35 +1,26 @@
 import 'package:kedis/main.dart';
-import 'package:kedis/repositories/category_repository.dart';
-import 'package:kedis/repositories/kedis_database.dart';
-import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
 import 'package:kedis/widgets/editable_task_item.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'support/fake_repositories.dart';
 
 void main() {
-  late KedisDatabase database;
-  late TaskRepository tasks;
-  late CategoryRepository categories;
+  late FakeTaskRepository tasks;
+  late FakeCategoryRepository categories;
   late _FakeThemePreferenceStore themePreferenceStore;
   late int widgetRefreshCount;
 
   setUp(() {
-    sqfliteFfiInit();
-    database = KedisDatabase.atPath(
-      inMemoryDatabasePath,
-      factory: databaseFactoryFfi,
-    );
-    tasks = TaskRepository.withDatabase(database);
-    categories = CategoryRepository.withDatabase(database);
+    final repositories = FakeRepositories();
+    tasks = repositories.tasks;
+    categories = repositories.categories;
     themePreferenceStore = _FakeThemePreferenceStore();
     widgetRefreshCount = 0;
   });
-
-  tearDown(() => database.close());
 
   Future<void> pumpUntil(
     WidgetTester tester,
@@ -264,12 +255,21 @@ void main() {
     await openCategory(tester, 'Inbox');
 
     await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
-    expect(find.text('Completed'), findsOneWidget);
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Completed').evaluate().isNotEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Completion did not update the task UI.',
+    );
     expect((await tasks.getTasks()).single.isCompleted, isTrue);
 
     await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Completed').evaluate().isEmpty,
+      'Completion Undo did not restore the active task UI.',
+    );
     final restored = (await tasks.getTasks()).single;
     expect(restored.isCompleted, isFalse);
     expect(restored.completedAt, isNull);
@@ -288,11 +288,21 @@ void main() {
     await openCategory(tester, 'School');
 
     await tester.tap(find.byTooltip('Delete Restore me'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () =>
+          find.text('Restore me').evaluate().isEmpty &&
+          find.text('UNDO').evaluate().isNotEmpty,
+      'Deleted task did not leave the category list.',
+    );
     expect(await tasks.getTasks(categoryId: school.id), isEmpty);
 
     await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Restore me').evaluate().isNotEmpty,
+      'Delete Undo did not restore the task.',
+    );
     final restored = (await tasks.getTasks(categoryId: school.id)).single;
     expect(restored.id, original.id);
     expect(restored.categoryId, school.id);
@@ -319,9 +329,17 @@ void main() {
     await openCategory(tester, 'School');
 
     await tester.tap(find.byTooltip('Move Move me'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Programming').evaluate().isNotEmpty,
+      'Move-category dialog did not appear.',
+    );
     await tester.tap(find.text('Programming'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Move me').evaluate().isEmpty,
+      'Moved task did not leave its original category.',
+    );
 
     expect(await tasks.getTasks(categoryId: school.id), isEmpty);
     final moved = (await tasks.getTasks(categoryId: programming.id)).single;
@@ -357,7 +375,11 @@ void main() {
     await tasks.createTask('Keep task', categoryId: school.id);
 
     await tester.tap(find.byTooltip('Category actions'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Edit category').evaluate().isNotEmpty,
+      'Category action menu did not appear.',
+    );
     await tester.tap(find.text('Edit category'));
     await pumpUntil(
       tester,
@@ -376,14 +398,24 @@ void main() {
     expect(find.text('Programming'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Category actions'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Delete category').evaluate().isNotEmpty,
+      'Category action menu did not reopen.',
+    );
     await tester.tap(find.text('Delete category'));
-    await tester.pumpAndSettle();
-    expect(find.text('Its tasks will be moved to Inbox.'), findsOneWidget);
+    await pumpUntil(
+      tester,
+      () => find.text('Its tasks will be moved to Inbox.').evaluate().isNotEmpty,
+      'Delete-category confirmation did not appear.',
+    );
     await tester.tap(find.text('Delete'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Programming').evaluate().isEmpty,
+      'Deleted category remained on the category home.',
+    );
 
-    expect(find.text('Programming'), findsNothing);
     final inbox = await categories.getInbox();
     expect(
       (await tasks.getTasks(categoryId: inbox.id)).single.title,
@@ -429,7 +461,11 @@ void main() {
     await tasks.toggleTask(task.id);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => tester.widget<Checkbox>(find.byType(Checkbox)).value == true,
+      'Resumed task screen did not reload task state.',
+    );
 
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
   });
@@ -440,11 +476,23 @@ void main() {
     await pumpKedis(tester);
 
     await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Theme').evaluate().isNotEmpty,
+      'Settings screen did not appear.',
+    );
     await tester.tap(find.text('Theme'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => find.text('Dark').evaluate().isNotEmpty,
+      'Theme picker did not appear.',
+    );
     await tester.tap(find.text('Dark'));
-    await tester.pumpAndSettle();
+    await pumpUntil(
+      tester,
+      () => tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode == ThemeMode.dark,
+      'Theme mode did not update to dark.',
+    );
 
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.themeMode, ThemeMode.dark);

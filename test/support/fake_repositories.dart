@@ -307,7 +307,7 @@ class _FakeRepositoryStore {
     categories[inbox.id] = inbox;
   }
 
-  final TaskCategory inbox = const TaskCategory(
+  final TaskCategory inbox = TaskCategory(
     id: 1,
     name: KedisDatabase.inboxName,
     colorValue: KedisDatabase.inboxColorValue,
