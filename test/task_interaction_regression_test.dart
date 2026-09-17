@@ -226,9 +226,10 @@ void main() {
     await waitForUndo(tester, 'Delete Undo action was not tappable.');
     await pumpUntil(
       tester,
-      () =>
-          tester.widget<SnackBar>(find.byType(SnackBar)).animation?.status ==
-          AnimationStatus.completed,
+      () {
+        final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+        return snackBar.animation?.status == AnimationStatus.completed;
+      },
       'Delete Undo snackbar did not finish appearing.',
     );
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));

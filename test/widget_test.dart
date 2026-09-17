@@ -165,7 +165,10 @@ void main() {
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
     await pumpUntil(
       tester,
-      () => find.byTooltip('Save task').hitTestable().evaluate().isNotEmpty,
+      () {
+        final saveAction = find.byTooltip('Save task').hitTestable();
+        return saveAction.evaluate().isNotEmpty;
+      },
       'Inline task save action did not become tappable.',
     );
     await tester.tap(find.byTooltip('Save task').hitTestable());
