@@ -78,7 +78,10 @@ void main() {
     await tester.tap(find.byTooltip('Add task'));
     await pumpUntil(
       tester,
-      () => find.byKey(const ValueKey('task-draft-input')).evaluate().isNotEmpty,
+      () {
+        final draftInput = find.byKey(const ValueKey('task-draft-input'));
+        return draftInput.evaluate().isNotEmpty;
+      },
       'Task draft editor did not appear.',
     );
 
