@@ -70,7 +70,10 @@ void main() {
     expect(renamed?.name, 'Programming');
     expect(renamed?.id, category.id);
     expect(recolored?.colorValue, 0xFF006C4C);
-    expect(recolored?.createdAt, category.createdAt);
+    expect(
+      recolored?.createdAt.millisecondsSinceEpoch,
+      category.createdAt.millisecondsSinceEpoch,
+    );
   });
 
   test('prevents changes that would alter the system Inbox', () async {
