@@ -35,6 +35,17 @@ void main() {
     fail(failureMessage);
   }
 
+  Future<void> waitForUndo(
+    WidgetTester tester,
+    String failureMessage,
+  ) async {
+    await pumpUntil(
+      tester,
+      () => find.text('UNDO').hitTestable().evaluate().isNotEmpty,
+      failureMessage,
+    );
+  }
+
   Future<void> pumpKedis(WidgetTester tester) async {
     await tester.pumpWidget(
       KedisApp(
@@ -147,11 +158,12 @@ void main() {
     await tester.tap(find.byTooltip('Add task'));
     await pumpUntil(
       tester,
-      () => find.byType(EditableTaskItem).evaluate().isNotEmpty,
-      'Inline task draft did not appear.',
+      () =>
+          find.byType(EditableTaskItem).evaluate().isNotEmpty &&
+          find.byTooltip('Add task').evaluate().isEmpty,
+      'Inline task draft did not replace the add-task action.',
     );
     expect(find.byType(EditableTaskItem), findsOneWidget);
-    expect(find.byTooltip('Add task'), findsNothing);
 
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
     await tester.tap(find.byTooltip('Save task'));
@@ -264,8 +276,9 @@ void main() {
       'Completion did not update the task UI.',
     );
     expect((await tasks.getTasks()).single.isCompleted, isTrue);
+    await waitForUndo(tester, 'Completion Undo action was not tappable.');
 
-    await tester.tap(find.text('UNDO'));
+    await tester.tap(find.text('UNDO').hitTestable());
     await pumpUntil(
       tester,
       () => find.text('Completed').evaluate().isEmpty,
@@ -297,8 +310,9 @@ void main() {
       'Deleted task did not leave the category list.',
     );
     expect(await tasks.getTasks(categoryId: school.id), isEmpty);
+    await waitForUndo(tester, 'Delete Undo action was not tappable.');
 
-    await tester.tap(find.text('UNDO'));
+    await tester.tap(find.text('UNDO').hitTestable());
     await pumpUntil(
       tester,
       () => find.text('Restore me').evaluate().isNotEmpty,
