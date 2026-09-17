@@ -149,7 +149,10 @@ class _CategoryTaskScreenState extends State<CategoryTaskScreen>
 
     _isSavingEdit = true;
     final succeeded = await _runMutation(() async {
-      final updated = await widget.taskRepository.updateTaskTitle(taskId, title);
+      final updated = await widget.taskRepository.updateTaskTitle(
+        taskId,
+        title,
+      );
       if (updated == null) {
         throw StateError('Task $taskId no longer exists.');
       }
@@ -272,9 +275,9 @@ class _CategoryTaskScreenState extends State<CategoryTaskScreen>
         .where((category) => category.id != task.categoryId)
         .toList(growable: false);
     if (destinations.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No other categories yet.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No other categories yet.')));
       return;
     }
 

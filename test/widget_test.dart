@@ -57,7 +57,10 @@ void main() {
     for (final title in ['One', 'Two', 'Three', 'Four']) {
       await tasks.createTask(title, categoryId: school.id);
     }
-    final completed = await tasks.createTask('Completed', categoryId: school.id);
+    final completed = await tasks.createTask(
+      'Completed',
+      categoryId: school.id,
+    );
     await tasks.setTaskCompletion(
       completed.id,
       isCompleted: true,
@@ -218,7 +221,10 @@ void main() {
     WidgetTester tester,
   ) async {
     final school = await categories.createCategory('School', 0xFF6750A4);
-    final original = await tasks.createTask('Restore me', categoryId: school.id);
+    final original = await tasks.createTask(
+      'Restore me',
+      categoryId: school.id,
+    );
     await pumpKedis(tester);
     await openCategory(tester, 'School');
 
@@ -302,7 +308,10 @@ void main() {
 
     expect(find.text('Programming'), findsNothing);
     final inbox = await categories.getInbox();
-    expect((await tasks.getTasks(categoryId: inbox.id)).single.title, 'Keep task');
+    expect(
+      (await tasks.getTasks(categoryId: inbox.id)).single.title,
+      'Keep task',
+    );
   });
 
   testWidgets('keeps active tasks before newest-first completed tasks', (

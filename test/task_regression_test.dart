@@ -177,31 +177,32 @@ void main() {
     expect(widgetRefreshCount, 1);
   });
 
-  testWidgets('undoing uncompletion restores the original completion timestamp', (
-    WidgetTester tester,
-  ) async {
-    final task = await tasks.createTask('Restore completion');
-    final completed = await tasks.toggleTask(task.id);
-    final originalCompletedAt = completed!.completedAt;
-    await pumpKedis(tester);
-    await openInbox(tester);
+  testWidgets(
+    'undoing uncompletion restores the original completion timestamp',
+    (WidgetTester tester) async {
+      final task = await tasks.createTask('Restore completion');
+      final completed = await tasks.toggleTask(task.id);
+      final originalCompletedAt = completed!.completedAt;
+      await pumpKedis(tester);
+      await openInbox(tester);
 
-    await tester.tap(find.byType(Checkbox));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Task marked incomplete'), findsOneWidget);
-    expect(find.text('Completed'), findsNothing);
+      expect(find.text('Task marked incomplete'), findsOneWidget);
+      expect(find.text('Completed'), findsNothing);
 
-    await tester.tap(find.text('UNDO'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('UNDO'));
+      await tester.pumpAndSettle();
 
-    final restored = (await tasks.getTasks()).single;
-    expect(restored.isCompleted, isTrue);
-    expect(restored.completedAt, originalCompletedAt);
-    expect(find.text('Completed'), findsOneWidget);
-    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
-    expect(widgetRefreshCount, 2);
-  });
+      final restored = (await tasks.getTasks()).single;
+      expect(restored.isCompleted, isTrue);
+      expect(restored.completedAt, originalCompletedAt);
+      expect(find.text('Completed'), findsOneWidget);
+      expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+      expect(widgetRefreshCount, 2);
+    },
+  );
 }
 
 class _FakeThemePreferenceStore extends ThemePreferenceStore {

@@ -33,53 +33,65 @@ void main() {
   test('task created for a custom category stays in that category', () async {
     final school = await categories.createCategory('School', 0xFF6750A4);
 
-    final task = await tasks.createTask('Database proposal', categoryId: school.id);
+    final task = await tasks.createTask(
+      'Database proposal',
+      categoryId: school.id,
+    );
 
     expect(task.categoryId, school.id);
     expect((await tasks.getTasks(categoryId: school.id)).single.id, task.id);
   });
 
-  test('moves a task without changing completion state or timestamps', () async {
-    final school = await categories.createCategory('School', 0xFF6750A4);
-    final programming = await categories.createCategory(
-      'Programming',
-      0xFF006C4C,
-    );
-    final created = await tasks.createTask(
-      'Finish migration',
-      categoryId: school.id,
-    );
-    final completedAt = DateTime.utc(2026, 9, 16, 12, 30);
-    final completed = await tasks.setTaskCompletion(
-      created.id,
-      isCompleted: true,
-      completedAt: completedAt,
-    );
+  test(
+    'moves a task without changing completion state or timestamps',
+    () async {
+      final school = await categories.createCategory('School', 0xFF6750A4);
+      final programming = await categories.createCategory(
+        'Programming',
+        0xFF006C4C,
+      );
+      final created = await tasks.createTask(
+        'Finish migration',
+        categoryId: school.id,
+      );
+      final completedAt = DateTime.utc(2026, 9, 16, 12, 30);
+      final completed = await tasks.setTaskCompletion(
+        created.id,
+        isCompleted: true,
+        completedAt: completedAt,
+      );
 
-    final moved = await tasks.moveTaskToCategory(created.id, programming.id);
+      final moved = await tasks.moveTaskToCategory(created.id, programming.id);
 
-    expect(moved?.categoryId, programming.id);
-    expect(moved?.id, completed?.id);
-    expect(moved?.title, completed?.title);
-    expect(moved?.createdAt, completed?.createdAt);
-    expect(moved?.isCompleted, isTrue);
-    expect(moved?.completedAt, completedAt);
-    expect(await tasks.getTasks(categoryId: school.id), isEmpty);
-    expect((await tasks.getTasks(categoryId: programming.id)).single.id, created.id);
-  });
+      expect(moved?.categoryId, programming.id);
+      expect(moved?.id, completed?.id);
+      expect(moved?.title, completed?.title);
+      expect(moved?.createdAt, completed?.createdAt);
+      expect(moved?.isCompleted, isTrue);
+      expect(moved?.completedAt, completedAt);
+      expect(await tasks.getTasks(categoryId: school.id), isEmpty);
+      expect(
+        (await tasks.getTasks(categoryId: programming.id)).single.id,
+        created.id,
+      );
+    },
+  );
 
-  test('active task queries preserve creation ordering inside a category', () async {
-    final category = await categories.createCategory('School', 0xFF6750A4);
-    final first = await tasks.createTask('First', categoryId: category.id);
-    final second = await tasks.createTask('Second', categoryId: category.id);
-    await tasks.setTaskCompletion(
-      first.id,
-      isCompleted: true,
-      completedAt: DateTime.utc(2026, 9, 16, 13),
-    );
+  test(
+    'active task queries preserve creation ordering inside a category',
+    () async {
+      final category = await categories.createCategory('School', 0xFF6750A4);
+      final first = await tasks.createTask('First', categoryId: category.id);
+      final second = await tasks.createTask('Second', categoryId: category.id);
+      await tasks.setTaskCompletion(
+        first.id,
+        isCompleted: true,
+        completedAt: DateTime.utc(2026, 9, 16, 13),
+      );
 
-    final active = await tasks.getActiveTasks(categoryId: category.id);
+      final active = await tasks.getActiveTasks(categoryId: category.id);
 
-    expect(active.map((task) => task.id), [second.id]);
-  });
+      expect(active.map((task) => task.id), [second.id]);
+    },
+  );
 }

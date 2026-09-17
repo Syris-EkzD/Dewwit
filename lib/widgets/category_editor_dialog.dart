@@ -134,7 +134,8 @@ class _CategoryColorChoice extends StatelessWidget {
               ? Icon(
                   Icons.check,
                   size: 20,
-                  color: ThemeData.estimateBrightnessForColor(color) ==
+                  color:
+                      ThemeData.estimateBrightnessForColor(color) ==
                           Brightness.dark
                       ? Colors.white
                       : Colors.black,

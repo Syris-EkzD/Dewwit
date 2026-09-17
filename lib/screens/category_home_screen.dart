@@ -169,7 +169,10 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
 
     try {
       if (result.name != category.name) {
-        await widget.categoryRepository.renameCategory(category.id, result.name);
+        await widget.categoryRepository.renameCategory(
+          category.id,
+          result.name,
+        );
       }
       if (result.colorValue != category.colorValue) {
         await widget.categoryRepository.updateCategoryColor(
@@ -217,7 +220,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -230,10 +234,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           children: [
             Text(
               'Kedis',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
             ),
             Text(
               'Your categories',

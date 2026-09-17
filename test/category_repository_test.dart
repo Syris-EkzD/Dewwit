@@ -58,7 +58,10 @@ void main() {
   test('renames and recolors a custom category', () async {
     final category = await categories.createCategory('Code', 0xFF6750A4);
 
-    final renamed = await categories.renameCategory(category.id, ' Programming ');
+    final renamed = await categories.renameCategory(
+      category.id,
+      ' Programming ',
+    );
     final recolored = await categories.updateCategoryColor(
       category.id,
       0xFF006C4C,
@@ -100,10 +103,7 @@ void main() {
     final remainingTasks = await tasks.getTasks();
 
     expect(movedCount, 1);
-    expect(
-      remainingCategories.any((item) => item.id == category.id),
-      isFalse,
-    );
+    expect(remainingCategories.any((item) => item.id == category.id), isFalse);
     expect(remainingTasks.single.id, task.id);
     expect(remainingTasks.single.categoryId, inbox.id);
   });
