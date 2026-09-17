@@ -54,7 +54,14 @@ void main() {
 
   Future<void> openCategory(WidgetTester tester, String name) async {
     await tester.tap(find.text(name).first);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    for (var attempt = 0; attempt < 40; attempt += 1) {
+      if (find.text('Inbox').evaluate().isNotEmpty) {
+        return;
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    fail('Kedis category home did not finish loading.');
   }
 
   testWidgets('shows category cards with a three-task active preview', (
