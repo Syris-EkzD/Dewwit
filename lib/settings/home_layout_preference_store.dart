@@ -17,8 +17,9 @@ class HomeLayoutPreferenceStore {
 
   HomeLayoutMode _decode(String? value) {
     return switch (value) {
+      'grid' => HomeLayoutMode.grid,
       'list' => HomeLayoutMode.list,
-      _ => HomeLayoutMode.grid,
+      _ => HomeLayoutMode.list,
     };
   }
 }

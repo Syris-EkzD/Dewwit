@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 class HomeLayoutController extends ChangeNotifier {
   HomeLayoutController(
     this._preferenceStore, {
-    HomeLayoutMode initialLayoutMode = HomeLayoutMode.grid,
+    HomeLayoutMode initialLayoutMode = HomeLayoutMode.list,
   }) : _layoutMode = initialLayoutMode;
 
   final HomeLayoutPreferenceStore _preferenceStore;

@@ -34,9 +34,11 @@ class CategoryHomeScreen extends StatefulWidget {
 
 class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     with WidgetsBindingObserver {
-  static const _previewLimit = 3;
+  static const _gridPreviewLimit = 2;
+  static const _listPreviewLimit = 3;
   static const _gridSpacing = KedisSpacing.small;
-  static const _minimumGridCardWidth = 148.0;
+  static const _minimumGridCardWidth = 156.0;
+  static const _gridBottomPadding = 136.0;
 
   List<TaskCategory> _categories = const [];
   List<Task> _tasks = const [];
@@ -450,7 +452,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
             KedisSpacing.medium,
             KedisSpacing.small,
             KedisSpacing.medium,
-            104,
+            _gridBottomPadding,
           ),
           child: Wrap(
             spacing: _gridSpacing,
@@ -502,8 +504,9 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     final activeTasks = categoryTasks
         .where((task) => !task.isCompleted)
         .toList(growable: false);
+    final previewLimit = isGridLayout ? _gridPreviewLimit : _listPreviewLimit;
     final previewTasks = activeTasks
-        .take(_previewLimit)
+        .take(previewLimit)
         .toList(growable: false);
 
     return CategoryCard(

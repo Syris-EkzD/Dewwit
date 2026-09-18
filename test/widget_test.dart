@@ -79,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows category cards with a three-task active preview', (
+  testWidgets('List keeps the three-task active preview', (
     WidgetTester tester,
   ) async {
     final school = await categories.createCategory('School', 0xFF6750A4);
@@ -100,6 +100,7 @@ void main() {
 
     await pumpKedis(tester);
 
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
     expect(find.text('Inbox'), findsOneWidget);
     expect(find.text('School'), findsOneWidget);
     expect(find.text('One'), findsOneWidget);
@@ -111,125 +112,198 @@ void main() {
     expect(find.text('+1 more'), findsOneWidget);
     expect(find.text('4 active'), findsOneWidget);
     expect(find.text('· 5 total'), findsOneWidget);
-    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
   });
 
-  testWidgets('grid cards keep aligned fixed geometry with long titles', (
+  testWidgets('Grid stays compact and uses two columns on a phone', (
     WidgetTester tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    homeLayoutController = HomeLayoutController(
+      homeLayoutPreferenceStore,
+      initialLayoutMode: HomeLayoutMode.grid,
+    );
 
     final inbox = await categories.getInbox();
-    final short = await categories.createCategory('Short', 0xFF6750A4);
-    final multiLine = await categories.createCategory(
-      'A category title that wraps across multiple lines cleanly',
+    final programming = await categories.createCategory(
+      'Programming',
+      0xFF6750A4,
+    );
+    final wrapped = await categories.createCategory(
+      'Research and Development',
       0xFF006C4C,
     );
     final excessive = await categories.createCategory(
-      'An extremely long category title that keeps going well beyond five lines '
-      'so the grid card must ellipsize it instead of allowing the content to '
-      'overflow into the counts and task preview area below',
+      'An extremely long category title that cannot fit within two lines',
       0xFF9C4146,
     );
 
     for (final title in ['One', 'Two', 'Three', 'Four']) {
-      await tasks.createTask(title, categoryId: short.id);
-      await tasks.createTask('Long $title', categoryId: multiLine.id);
+      await tasks.createTask(title, categoryId: programming.id);
+      await tasks.createTask('Long $title', categoryId: wrapped.id);
     }
 
     await pumpKedis(tester);
 
     final inboxCard = find.byKey(ValueKey('category-card-${inbox.id}'));
-    final shortCard = find.byKey(ValueKey('category-card-${short.id}'));
-    final multiLineCard = find.byKey(ValueKey('category-card-${multiLine.id}'));
-    final excessiveCard = find.byKey(ValueKey('category-card-${excessive.id}'));
+    final programmingCard = find.byKey(
+      ValueKey('category-card-${programming.id}'),
+    );
+    final wrappedCard = find.byKey(ValueKey('category-card-${wrapped.id}'));
+    final excessiveCard = find.byKey(
+      ValueKey('category-card-${excessive.id}'),
+    );
 
-    for (final card in [inboxCard, shortCard, multiLineCard, excessiveCard]) {
+    for (final card in [
+      inboxCard,
+      programmingCard,
+      wrappedCard,
+      excessiveCard,
+    ]) {
       expect(tester.getSize(card).height, CategoryCard.gridHeight);
     }
 
-    expect(tester.getSize(inboxCard).width, tester.getSize(shortCard).width);
-    expect(tester.getTopLeft(inboxCard).dy, tester.getTopLeft(shortCard).dy);
+    expect(
+      tester.getSize(inboxCard).width,
+      tester.getSize(programmingCard).width,
+    );
+    expect(
+      tester.getTopLeft(inboxCard).dy,
+      tester.getTopLeft(programmingCard).dy,
+    );
     expect(
       tester.getTopLeft(inboxCard).dx,
-      lessThan(tester.getTopLeft(shortCard).dx),
+      lessThan(tester.getTopLeft(programmingCard).dx),
     );
 
-    final shortTitle = tester.widget<Text>(
-      find.descendant(of: shortCard, matching: find.text('Short')),
+    final programmingTitle = tester.widget<Text>(
+      find.descendant(
+        of: programmingCard,
+        matching: find.text(programming.name),
+      ),
     );
-    final multiLineTitle = tester.widget<Text>(
-      find.descendant(of: multiLineCard, matching: find.text(multiLine.name)),
+    final wrappedTitle = tester.widget<Text>(
+      find.descendant(of: wrappedCard, matching: find.text(wrapped.name)),
     );
     final excessiveTitle = tester.widget<Text>(
-      find.descendant(of: excessiveCard, matching: find.text(excessive.name)),
-    );
-
-    expect(shortTitle.maxLines, CategoryCard.gridTitleMaxLines);
-    expect(multiLineTitle.maxLines, CategoryCard.gridTitleMaxLines);
-    expect(excessiveTitle.maxLines, CategoryCard.gridTitleMaxLines);
-    expect(excessiveTitle.overflow, TextOverflow.ellipsis);
-    expect(
-      tester
-          .getSize(
-            find.descendant(
-              of: multiLineCard,
-              matching: find.text(multiLine.name),
-            ),
-          )
-          .height,
-      greaterThan(
-        tester
-            .getSize(
-              find.descendant(of: shortCard, matching: find.text('Short')),
-            )
-            .height,
+      find.descendant(
+        of: excessiveCard,
+        matching: find.text(excessive.name),
       ),
     );
 
-    final shortTop = tester.getTopLeft(shortCard).dy;
-    final multiLineTop = tester.getTopLeft(multiLineCard).dy;
-    final shortCountOffset =
-        tester
-            .getTopLeft(
-              find.descendant(of: shortCard, matching: find.text('4 active')),
-            )
-            .dy -
-        shortTop;
-    final multiLineCountOffset =
+    expect(programmingTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(wrappedTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(excessiveTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(excessiveTitle.overflow, TextOverflow.ellipsis);
+    expect(find.text('Programming'), findsOneWidget);
+
+    final programmingTop = tester.getTopLeft(programmingCard).dy;
+    final wrappedTop = tester.getTopLeft(wrappedCard).dy;
+    final programmingCountOffset =
         tester
             .getTopLeft(
               find.descendant(
-                of: multiLineCard,
+                of: programmingCard,
                 matching: find.text('4 active'),
               ),
             )
             .dy -
-        multiLineTop;
-    final shortPreviewOffset =
-        tester
-            .getTopLeft(
-              find.descendant(of: shortCard, matching: find.text('One')),
-            )
-            .dy -
-        shortTop;
-    final multiLinePreviewOffset =
+        programmingTop;
+    final wrappedCountOffset =
         tester
             .getTopLeft(
               find.descendant(
-                of: multiLineCard,
+                of: wrappedCard,
+                matching: find.text('4 active'),
+              ),
+            )
+            .dy -
+        wrappedTop;
+    final programmingPreviewOffset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: programmingCard,
+                matching: find.text('One'),
+              ),
+            )
+            .dy -
+        programmingTop;
+    final wrappedPreviewOffset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: wrappedCard,
                 matching: find.text('Long One'),
               ),
             )
             .dy -
-        multiLineTop;
+        wrappedTop;
 
-    expect(shortCountOffset, multiLineCountOffset);
-    expect(shortPreviewOffset, multiLinePreviewOffset);
-    expect(find.text('Four'), findsNothing);
-    expect(find.text('Long Four'), findsNothing);
-    expect(find.text('+1 more'), findsNWidgets(2));
+    expect(programmingCountOffset, wrappedCountOffset);
+    expect(programmingPreviewOffset, wrappedPreviewOffset);
+    expect(
+      find.descendant(of: programmingCard, matching: find.text('One')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: programmingCard, matching: find.text('Two')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: programmingCard, matching: find.text('Three')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: programmingCard, matching: find.text('Four')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(of: programmingCard, matching: find.text('+2 more')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: inboxCard, matching: find.text('No active tasks')),
+      findsOneWidget,
+    );
+
+    final gridScroll = tester.widget<SingleChildScrollView>(
+      find.byKey(const ValueKey('category-home-grid')),
+    );
+    final gridPadding = gridScroll.padding! as EdgeInsets;
+    expect(gridPadding.bottom, greaterThan(86));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Grid falls back to one column on a narrow surface', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(340, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    homeLayoutController = HomeLayoutController(
+      homeLayoutPreferenceStore,
+      initialLayoutMode: HomeLayoutMode.grid,
+    );
+
+    final inbox = await categories.getInbox();
+    final school = await categories.createCategory('School', 0xFF6750A4);
+
+    await pumpKedis(tester);
+
+    final inboxCard = find.byKey(ValueKey('category-card-${inbox.id}'));
+    final schoolCard = find.byKey(ValueKey('category-card-${school.id}'));
+
+    expect(
+      tester.getTopLeft(inboxCard).dx,
+      tester.getTopLeft(schoolCard).dx,
+    );
+    expect(
+      tester.getTopLeft(schoolCard).dy,
+      greaterThan(tester.getTopLeft(inboxCard).dy),
+    );
+    expect(tester.getSize(inboxCard).height, CategoryCard.gridHeight);
+    expect(tester.getSize(schoolCard).height, CategoryCard.gridHeight);
     expect(tester.takeException(), isNull);
   });
 
@@ -246,17 +320,53 @@ void main() {
 
     await pumpKedis(tester);
 
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
     expect(find.text('0 active'), findsWidgets);
     expect(find.text('· 1 total'), findsOneWidget);
     expect(find.text('No active tasks'), findsWidgets);
     expect(find.text('Finished'), findsNothing);
   });
 
-  testWidgets('switches the home layout to List from Settings', (
+  testWidgets('default Home layout is List', (WidgetTester tester) async {
+    await pumpKedis(tester);
+
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-home-grid')), findsNothing);
+  });
+
+  testWidgets('explicit Grid initial layout opens Grid', (
+    WidgetTester tester,
+  ) async {
+    homeLayoutController = HomeLayoutController(
+      homeLayoutPreferenceStore,
+      initialLayoutMode: HomeLayoutMode.grid,
+    );
+
+    await pumpKedis(tester);
+
+    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-home-list')), findsNothing);
+  });
+
+  testWidgets('explicit List initial layout opens List', (
+    WidgetTester tester,
+  ) async {
+    homeLayoutController = HomeLayoutController(
+      homeLayoutPreferenceStore,
+      initialLayoutMode: HomeLayoutMode.list,
+    );
+
+    await pumpKedis(tester);
+
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-home-grid')), findsNothing);
+  });
+
+  testWidgets('switches the home layout to Grid from Settings', (
     WidgetTester tester,
   ) async {
     await pumpKedis(tester);
-    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
 
     await tester.tap(find.byTooltip('Settings'));
     await pumpUntil(
@@ -270,24 +380,24 @@ void main() {
       () => find.text('Choose home layout').evaluate().isNotEmpty,
       'Home-layout picker did not appear.',
     );
-    await tester.tap(find.text('List'));
+    await tester.tap(find.text('Grid'));
     await pumpUntil(
       tester,
-      () => homeLayoutController.layoutMode == HomeLayoutMode.list,
+      () => homeLayoutController.layoutMode == HomeLayoutMode.grid,
       'Home-layout preference did not update.',
     );
     await tester.pageBack();
     await pumpUntil(
       tester,
       () => find
-          .byKey(const ValueKey('category-home-list'))
+          .byKey(const ValueKey('category-home-grid'))
           .evaluate()
           .isNotEmpty,
-      'Home did not render the selected List layout.',
+      'Home did not render the selected Grid layout.',
     );
 
-    expect(homeLayoutPreferenceStore.savedLayoutMode, HomeLayoutMode.list);
-    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
+    expect(homeLayoutPreferenceStore.savedLayoutMode, HomeLayoutMode.grid);
+    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
   });
 
   testWidgets('home quick capture creates a task in Inbox', (

@@ -16,9 +16,11 @@ class CategoryCard extends StatelessWidget {
     super.key,
   });
 
-  static const gridHeight = 312.0;
-  static const gridTitleHeight = 120.0;
-  static const gridTitleMaxLines = 5;
+  static const gridHeight = 200.0;
+  static const gridTitleHeight = 40.0;
+  static const gridTitleMaxLines = 2;
+  static const _gridActionSize = 32.0;
+  static const _gridActionIconSize = 20.0;
   static const _gridCountHeight = 20.0;
 
   final TaskCategory category;
@@ -40,6 +42,7 @@ class CategoryCard extends StatelessWidget {
       textTheme,
       maxLines: isGridLayout ? gridTitleMaxLines : 1,
       alignToTop: isGridLayout,
+      compact: isGridLayout,
     );
     final counts = _buildCounts(textTheme, colorScheme, accent);
 
@@ -141,7 +144,10 @@ class CategoryCard extends StatelessWidget {
     TextTheme textTheme, {
     required int maxLines,
     required bool alignToTop,
+    required bool compact,
   }) {
+    final titleStyle = compact ? textTheme.titleSmall : textTheme.titleMedium;
+
     return Row(
       crossAxisAlignment: alignToTop
           ? CrossAxisAlignment.start
@@ -152,12 +158,20 @@ class CategoryCard extends StatelessWidget {
             category.name,
             maxLines: maxLines,
             overflow: TextOverflow.ellipsis,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: titleStyle?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
         if (onEdit != null && onDelete != null)
           PopupMenuButton<_CategoryCardAction>(
             tooltip: 'Category actions',
+            padding: compact ? EdgeInsets.zero : const EdgeInsets.all(8),
+            iconSize: compact ? _gridActionIconSize : null,
+            constraints: compact
+                ? const BoxConstraints.tightFor(
+                    width: _gridActionSize,
+                    height: _gridActionSize,
+                  )
+                : null,
             onSelected: (action) {
               switch (action) {
                 case _CategoryCardAction.edit:
