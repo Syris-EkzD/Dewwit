@@ -524,6 +524,90 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('home quick capture keeps a stable responsive width', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpKedis(tester);
+    await openHomeTaskCapture(tester);
+
+    const layoutTolerance = 1.0;
+    final dialogContent = find.byKey(
+      const ValueKey('quick-capture-content'),
+    );
+    final titleField = find.byKey(const ValueKey('quick-capture-title'));
+    final categorySelector = find.byKey(
+      const ValueKey('quick-capture-category'),
+    );
+    final cancelAction = find.text('Cancel');
+    final addAction = find.text('Add');
+
+    final initialContentWidth = tester.getSize(dialogContent).width;
+    final initialFieldWidth = tester.getSize(titleField).width;
+    final initialFieldHeight = tester.getSize(titleField).height;
+    final field = tester.widget<TextField>(titleField);
+
+    expect(field.minLines, 1);
+    expect(field.maxLines, isNull);
+    expect(field.autofocus, isTrue);
+    expect(field.textCapitalization, TextCapitalization.sentences);
+    expect(field.controller, isNull);
+    expect(initialContentWidth, lessThan(360));
+    expect(categorySelector, findsOneWidget);
+    expect(cancelAction, findsOneWidget);
+    expect(addAction, findsOneWidget);
+
+    await tester.enterText(titleField, 'Short title');
+    await tester.pump();
+
+    expect(
+      tester.getSize(dialogContent).width,
+      closeTo(initialContentWidth, layoutTolerance),
+    );
+    expect(
+      tester.getSize(titleField).width,
+      closeTo(initialFieldWidth, layoutTolerance),
+    );
+
+    const longTitle =
+        'This is a deliberately long task title that should wrap naturally '
+        'inside the available Add Task dialog width without making the dialog '
+        'itself any wider, even as more words continue onto additional lines.';
+    await tester.enterText(titleField, longTitle);
+    await tester.pump();
+
+    expect(
+      tester.getSize(dialogContent).width,
+      closeTo(initialContentWidth, layoutTolerance),
+    );
+    expect(
+      tester.getSize(titleField).width,
+      closeTo(initialFieldWidth, layoutTolerance),
+    );
+    expect(
+      tester.getSize(titleField).height,
+      greaterThan(initialFieldHeight),
+    );
+
+    final editableText = tester.widget<EditableText>(
+      find.descendant(of: titleField, matching: find.byType(EditableText)),
+    );
+    expect(editableText.controller.text, longTitle);
+    expect(editableText.maxLines, isNull);
+    expect(categorySelector, findsOneWidget);
+    expect(cancelAction, findsOneWidget);
+    expect(addAction, findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(cancelAction);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add task'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('home quick capture creates in a selected category', (
     WidgetTester tester,
   ) async {

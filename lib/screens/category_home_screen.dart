@@ -134,92 +134,97 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
 
           return AlertDialog(
             title: const Text('Add task'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  autofocus: true,
-                  minLines: 1,
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(hintText: 'Task title'),
-                  onChanged: (value) => draftTitle = value,
-                  onSubmitted: submit,
-                ),
-                const SizedBox(height: KedisSpacing.medium),
-                MenuAnchor(
-                  menuChildren: [
-                    for (final category in _categories)
-                      MenuItemButton(
-                        key: ValueKey(
-                          'quick-capture-category-option-${category.id}',
-                        ),
-                        leadingIcon: _buildCategoryColorDot(
-                          category,
+            content: SizedBox(
+              key: const ValueKey('quick-capture-content'),
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    key: const ValueKey('quick-capture-title'),
+                    autofocus: true,
+                    minLines: 1,
+                    maxLines: null,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(hintText: 'Task title'),
+                    onChanged: (value) => draftTitle = value,
+                    onSubmitted: submit,
+                  ),
+                  const SizedBox(height: KedisSpacing.medium),
+                  MenuAnchor(
+                    menuChildren: [
+                      for (final category in _categories)
+                        MenuItemButton(
                           key: ValueKey(
-                            'quick-capture-category-option-color-${category.id}',
+                            'quick-capture-category-option-${category.id}',
+                          ),
+                          leadingIcon: _buildCategoryColorDot(
+                            category,
+                            key: ValueKey(
+                              'quick-capture-category-option-color-${category.id}',
+                            ),
+                          ),
+                          onPressed: () {
+                            setDialogState(
+                              () => selectedCategoryId = category.id,
+                            );
+                          },
+                          child: Text(
+                            category.name,
+                            key: ValueKey(
+                              'quick-capture-category-option-label-${category.id}',
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        onPressed: () {
-                          setDialogState(
-                            () => selectedCategoryId = category.id,
-                          );
+                    ],
+                    builder: (context, menuController, child) {
+                      final selectedCategory = _categories.firstWhere(
+                        (category) => category.id == selectedCategoryId,
+                        orElse: () => inbox,
+                      );
+                      return InkWell(
+                        key: const ValueKey('quick-capture-category'),
+                        borderRadius: BorderRadius.circular(KedisRadii.small),
+                        onTap: () {
+                          if (menuController.isOpen) {
+                            menuController.close();
+                          } else {
+                            menuController.open();
+                          }
                         },
-                        child: Text(
-                          category.name,
-                          key: ValueKey(
-                            'quick-capture-category-option-label-${category.id}',
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                            suffixIcon: Icon(Icons.arrow_drop_down),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  builder: (context, menuController, child) {
-                    final selectedCategory = _categories.firstWhere(
-                      (category) => category.id == selectedCategoryId,
-                      orElse: () => inbox,
-                    );
-                    return InkWell(
-                      key: const ValueKey('quick-capture-category'),
-                      borderRadius: BorderRadius.circular(KedisRadii.small),
-                      onTap: () {
-                        if (menuController.isOpen) {
-                          menuController.close();
-                        } else {
-                          menuController.open();
-                        }
-                      },
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Category',
-                          suffixIcon: Icon(Icons.arrow_drop_down),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildCategoryColorDot(
-                              selectedCategory,
-                              key: const ValueKey(
-                                'quick-capture-selected-category-color',
-                              ),
-                            ),
-                            const SizedBox(width: KedisSpacing.small),
-                            Expanded(
-                              child: Text(
-                                selectedCategory.name,
+                          child: Row(
+                            children: [
+                              _buildCategoryColorDot(
+                                selectedCategory,
                                 key: const ValueKey(
-                                  'quick-capture-selected-category',
+                                  'quick-capture-selected-category-color',
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: KedisSpacing.small),
+                              Expanded(
+                                child: Text(
+                                  selectedCategory.name,
+                                  key: const ValueKey(
+                                    'quick-capture-selected-category',
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
