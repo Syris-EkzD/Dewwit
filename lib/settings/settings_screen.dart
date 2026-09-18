@@ -171,9 +171,8 @@ class SettingsSection extends StatelessWidget {
             ),
             child: Text(
               title,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              style: Theme.of(context).textTheme.labelLarge
+                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
             ),
           ),
           Card(
@@ -229,9 +228,8 @@ class SettingsItem extends StatelessWidget {
               padding: const EdgeInsets.only(top: KedisSpacing.xSmall),
               child: Text(
                 description!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ),
       trailing: Row(
@@ -240,9 +238,8 @@ class SettingsItem extends StatelessWidget {
           if (value != null) ...[
             Text(
               value!,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: colorScheme.primary),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: colorScheme.primary),
             ),
             const SizedBox(width: KedisSpacing.xSmall),
           ],

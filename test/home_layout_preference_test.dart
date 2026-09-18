@@ -11,10 +11,7 @@ void main() {
     final initial = await store.load();
     expect(initial, HomeLayoutMode.grid);
 
-    final controller = HomeLayoutController(
-      store,
-      initialLayoutMode: initial,
-    );
+    final controller = HomeLayoutController(store, initialLayoutMode: initial);
     await controller.setLayoutMode(HomeLayoutMode.list);
 
     expect(controller.layoutMode, HomeLayoutMode.list);

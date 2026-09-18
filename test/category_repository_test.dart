@@ -131,10 +131,6 @@ void main() {
 
     final restored = await tasks.restoreTask(task.id);
     expect(restored?.categoryId, inbox.id);
-    expect(
-      (await tasks.getTasks(categoryId: inbox.id)).single.id,
-      task.id,
-    );
+    expect((await tasks.getTasks(categoryId: inbox.id)).single.id, task.id);
   });
-
 }

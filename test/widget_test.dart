@@ -94,10 +94,7 @@ void main() {
       isCompleted: true,
       completedAt: DateTime.utc(2026, 9, 16, 12),
     );
-    final trashed = await tasks.createTask(
-      'Trashed',
-      categoryId: school.id,
-    );
+    final trashed = await tasks.createTask('Trashed', categoryId: school.id);
     await tasks.deleteTask(trashed.id);
 
     await pumpKedis(tester);
@@ -120,10 +117,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final school = await categories.createCategory('School', 0xFF6750A4);
-    final completed = await tasks.createTask(
-      'Finished',
-      categoryId: school.id,
-    );
+    final completed = await tasks.createTask('Finished', categoryId: school.id);
     await tasks.setTaskCompletion(
       completed.id,
       isCompleted: true,
@@ -165,7 +159,10 @@ void main() {
     await tester.pageBack();
     await pumpUntil(
       tester,
-      () => find.byKey(const ValueKey('category-home-list')).evaluate().isNotEmpty,
+      () => find
+          .byKey(const ValueKey('category-home-list'))
+          .evaluate()
+          .isNotEmpty,
       'Home did not render the selected List layout.',
     );
 
@@ -186,9 +183,11 @@ void main() {
       'Quick-capture dialog did not appear.',
     );
     expect(
-      tester.widget<DropdownButton<int>>(
-        find.byKey(const ValueKey('quick-capture-category')),
-      ).value,
+      tester
+          .widget<DropdownButton<int>>(
+            find.byKey(const ValueKey('quick-capture-category')),
+          )
+          .value,
       inbox.id,
     );
     await tester.enterText(find.byType(TextField), '  Quick capture  ');
@@ -218,7 +217,10 @@ void main() {
     await tester.tap(find.byTooltip('Add task'));
     await pumpUntil(
       tester,
-      () => find.byKey(const ValueKey('quick-capture-category')).evaluate().isNotEmpty,
+      () => find
+          .byKey(const ValueKey('quick-capture-category'))
+          .evaluate()
+          .isNotEmpty,
       'Quick-capture category selector did not appear.',
     );
     await tester.tap(find.byKey(const ValueKey('quick-capture-category')));

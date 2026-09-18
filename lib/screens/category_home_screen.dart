@@ -163,9 +163,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
                       ],
                       onChanged: (categoryId) {
                         if (categoryId == null) return;
-                        setDialogState(
-                          () => selectedCategoryId = categoryId,
-                        );
+                        setDialogState(() => selectedCategoryId = categoryId);
                       },
                     ),
                   ),
@@ -291,9 +289,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -306,10 +303,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           children: [
             Text(
               'Kedis',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
             ),
             Text(
               'Your categories',
@@ -459,12 +454,8 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 }
 
-
 class _QuickCaptureResult {
-  const _QuickCaptureResult({
-    required this.title,
-    required this.categoryId,
-  });
+  const _QuickCaptureResult({required this.title, required this.categoryId});
 
   final String title;
   final int categoryId;

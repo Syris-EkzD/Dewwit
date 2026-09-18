@@ -48,9 +48,7 @@ void main() {
         taskRepository: tasks,
         categoryRepository: categories,
         themeController: ThemeController(_FakeThemePreferenceStore()),
-        homeLayoutController: HomeLayoutController(
-          HomeLayoutPreferenceStore(),
-        ),
+        homeLayoutController: HomeLayoutController(HomeLayoutPreferenceStore()),
         widgetRefresh: () async {
           widgetRefreshCount += 1;
         },
