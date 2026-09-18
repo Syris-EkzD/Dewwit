@@ -1,3 +1,5 @@
+import 'package:kedis/settings/home_layout_controller.dart';
+import 'package:kedis/settings/home_layout_preference_store.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/theme/kedis_design.dart';
 import 'package:flutter/material.dart';
@@ -6,9 +8,14 @@ const _itemVerticalPadding = 14.0;
 const _itemIconSize = 40.0;
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({required this.themeController, super.key});
+  const SettingsScreen({
+    required this.themeController,
+    required this.homeLayoutController,
+    super.key,
+  });
 
   final ThemeController themeController;
+  final HomeLayoutController homeLayoutController;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +41,16 @@ class SettingsScreen extends StatelessWidget {
                     description: 'Choose how Kedis looks',
                     value: _themeModeLabel(themeController.themeMode),
                     onTap: () => _showThemeDialog(context),
+                  ),
+                ),
+                ListenableBuilder(
+                  listenable: homeLayoutController,
+                  builder: (context, _) => SettingsItem(
+                    icon: Icons.grid_view_outlined,
+                    title: 'Home layout',
+                    description: 'Choose how category cards are arranged',
+                    value: _homeLayoutLabel(homeLayoutController.layoutMode),
+                    onTap: () => _showHomeLayoutDialog(context),
                   ),
                 ),
               ],
@@ -73,6 +90,36 @@ class SettingsScreen extends StatelessWidget {
       await themeController.setThemeMode(selectedMode);
     }
   }
+
+  Future<void> _showHomeLayoutDialog(BuildContext context) async {
+    final selectedMode = await showDialog<HomeLayoutMode>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose home layout'),
+        content: RadioGroup<HomeLayoutMode>(
+          groupValue: homeLayoutController.layoutMode,
+          onChanged: (mode) => Navigator.pop(context, mode),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: HomeLayoutMode.values
+                .map(
+                  (mode) => RadioListTile<HomeLayoutMode>(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(_homeLayoutLabel(mode)),
+                    subtitle: Text(_homeLayoutDescription(mode)),
+                    value: mode,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+
+    if (selectedMode != null) {
+      await homeLayoutController.setLayoutMode(selectedMode);
+    }
+  }
 }
 
 class SettingsSection extends StatelessWidget {
@@ -100,8 +147,9 @@ class SettingsSection extends StatelessWidget {
             ),
             child: Text(
               title,
-              style: Theme.of(context).textTheme.labelLarge
-                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
           Card(
@@ -157,8 +205,9 @@ class SettingsItem extends StatelessWidget {
               padding: const EdgeInsets.only(top: KedisSpacing.xSmall),
               child: Text(
                 description!,
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
       trailing: Row(
@@ -166,8 +215,9 @@ class SettingsItem extends StatelessWidget {
         children: [
           Text(
             value,
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: colorScheme.primary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colorScheme.primary),
           ),
           const SizedBox(width: KedisSpacing.xSmall),
           Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant),
@@ -191,5 +241,19 @@ String _themeModeLabel(ThemeMode mode) {
     ThemeMode.system => 'System',
     ThemeMode.light => 'Light',
     ThemeMode.dark => 'Dark',
+  };
+}
+
+String _homeLayoutDescription(HomeLayoutMode mode) {
+  return switch (mode) {
+    HomeLayoutMode.grid => 'Two compact category cards per row',
+    HomeLayoutMode.list => 'Full-width category cards',
+  };
+}
+
+String _homeLayoutLabel(HomeLayoutMode mode) {
+  return switch (mode) {
+    HomeLayoutMode.grid => 'Grid',
+    HomeLayoutMode.list => 'List',
   };
 }

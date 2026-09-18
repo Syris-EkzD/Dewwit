@@ -7,6 +7,7 @@ class CategoryCard extends StatelessWidget {
   const CategoryCard({
     required this.category,
     required this.activeCount,
+    required this.totalCount,
     required this.previewTasks,
     required this.onTap,
     this.onEdit,
@@ -16,6 +17,7 @@ class CategoryCard extends StatelessWidget {
 
   final TaskCategory category;
   final int activeCount;
+  final int totalCount;
   final List<Task> previewTasks;
   final VoidCallback onTap;
   final VoidCallback? onEdit;
@@ -58,14 +60,6 @@ class CategoryCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: KedisSpacing.small),
-                  Text(
-                    '$activeCount',
-                    style: textTheme.titleSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                   if (onEdit != null && onDelete != null)
                     PopupMenuButton<_CategoryCardAction>(
                       tooltip: 'Category actions',
@@ -92,6 +86,26 @@ class CategoryCard extends StatelessWidget {
                     )
                   else
                     const SizedBox(width: KedisSpacing.small),
+                ],
+              ),
+              const SizedBox(height: KedisSpacing.xSmall),
+              Wrap(
+                spacing: KedisSpacing.xSmall,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '$activeCount active',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '· $totalCount total',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
               if (previewTasks.isEmpty) ...[

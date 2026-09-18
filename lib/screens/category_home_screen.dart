@@ -3,6 +3,8 @@ import 'package:kedis/models/task_category.dart';
 import 'package:kedis/repositories/category_repository.dart';
 import 'package:kedis/repositories/task_repository.dart';
 import 'package:kedis/screens/category_task_screen.dart';
+import 'package:kedis/settings/home_layout_controller.dart';
+import 'package:kedis/settings/home_layout_preference_store.dart';
 import 'package:kedis/settings/settings_screen.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/theme/kedis_design.dart';
@@ -15,6 +17,7 @@ class CategoryHomeScreen extends StatefulWidget {
     required this.categoryRepository,
     required this.taskRepository,
     required this.themeController,
+    required this.homeLayoutController,
     required this.widgetRefresh,
     super.key,
   });
@@ -22,6 +25,7 @@ class CategoryHomeScreen extends StatefulWidget {
   final CategoryRepository categoryRepository;
   final TaskRepository taskRepository;
   final ThemeController themeController;
+  final HomeLayoutController homeLayoutController;
   final Future<void> Function() widgetRefresh;
 
   @override
@@ -31,9 +35,11 @@ class CategoryHomeScreen extends StatefulWidget {
 class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     with WidgetsBindingObserver {
   static const _previewLimit = 3;
+  static const _gridSpacing = KedisSpacing.small;
+  static const _minimumGridCardWidth = 148.0;
 
   List<TaskCategory> _categories = const [];
-  List<Task> _activeTasks = const [];
+  List<Task> _tasks = const [];
   bool _isLoading = true;
   bool _hasLoadError = false;
 
@@ -60,14 +66,14 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   Future<void> _loadOverview() async {
     try {
       final categoriesFuture = widget.categoryRepository.getCategories();
-      final tasksFuture = widget.taskRepository.getActiveTasks();
+      final tasksFuture = widget.taskRepository.getTasks();
       final categories = await categoriesFuture;
-      final activeTasks = await tasksFuture;
+      final tasks = await tasksFuture;
       if (!mounted) return;
 
       setState(() {
         _categories = categories;
-        _activeTasks = activeTasks;
+        _tasks = tasks;
         _isLoading = false;
         _hasLoadError = false;
       });
@@ -219,8 +225,9 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -233,8 +240,10 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           children: [
             Text(
               'Kedis',
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
             ),
             Text(
               'Your categories',
@@ -256,8 +265,10 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute<void>(
-                  builder: (context) =>
-                      SettingsScreen(themeController: widget.themeController),
+                  builder: (context) => SettingsScreen(
+                    themeController: widget.themeController,
+                    homeLayoutController: widget.homeLayoutController,
+                  ),
                 ),
               ),
               tooltip: 'Settings',
@@ -293,7 +304,63 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       );
     }
 
+    return ListenableBuilder(
+      listenable: widget.homeLayoutController,
+      builder: (context, _) {
+        final tasksByCategory = <int, List<Task>>{};
+        for (final task in _tasks) {
+          tasksByCategory.putIfAbsent(task.categoryId, () => []).add(task);
+        }
+
+        return switch (widget.homeLayoutController.layoutMode) {
+          HomeLayoutMode.grid => _buildGrid(tasksByCategory),
+          HomeLayoutMode.list => _buildList(tasksByCategory),
+        };
+      },
+    );
+  }
+
+  Widget _buildGrid(Map<int, List<Task>> tasksByCategory) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final horizontalPadding = KedisSpacing.medium * 2;
+        final contentWidth = constraints.maxWidth - horizontalPadding;
+        final twoColumns =
+            contentWidth >= (_minimumGridCardWidth * 2) + _gridSpacing;
+        final cardWidth = twoColumns
+            ? (contentWidth - _gridSpacing) / 2
+            : contentWidth;
+
+        return SingleChildScrollView(
+          key: const ValueKey('category-home-grid'),
+          padding: const EdgeInsets.fromLTRB(
+            KedisSpacing.medium,
+            KedisSpacing.small,
+            KedisSpacing.medium,
+            104,
+          ),
+          child: Wrap(
+            spacing: _gridSpacing,
+            runSpacing: KedisSpacing.medium,
+            children: [
+              for (final category in _categories)
+                SizedBox(
+                  width: cardWidth,
+                  child: _buildCategoryCard(
+                    category,
+                    tasksByCategory[category.id] ?? const [],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildList(Map<int, List<Task>> tasksByCategory) {
     return ListView.separated(
+      key: const ValueKey('category-home-list'),
       padding: const EdgeInsets.fromLTRB(
         KedisSpacing.medium,
         KedisSpacing.small,
@@ -305,23 +372,31 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           const SizedBox(height: KedisSpacing.medium),
       itemBuilder: (context, index) {
         final category = _categories[index];
-        final categoryTasks = _activeTasks
-            .where((task) => task.categoryId == category.id)
-            .toList(growable: false);
-        final previewTasks = categoryTasks
-            .take(_previewLimit)
-            .toList(growable: false);
-
-        return CategoryCard(
-          key: ValueKey('category-card-${category.id}'),
-          category: category,
-          activeCount: categoryTasks.length,
-          previewTasks: previewTasks,
-          onTap: () => _openCategory(category),
-          onEdit: category.isSystem ? null : () => _editCategory(category),
-          onDelete: category.isSystem ? null : () => _deleteCategory(category),
+        return _buildCategoryCard(
+          category,
+          tasksByCategory[category.id] ?? const [],
         );
       },
+    );
+  }
+
+  Widget _buildCategoryCard(TaskCategory category, List<Task> categoryTasks) {
+    final activeTasks = categoryTasks
+        .where((task) => !task.isCompleted)
+        .toList(growable: false);
+    final previewTasks = activeTasks
+        .take(_previewLimit)
+        .toList(growable: false);
+
+    return CategoryCard(
+      key: ValueKey('category-card-${category.id}'),
+      category: category,
+      activeCount: activeTasks.length,
+      totalCount: categoryTasks.length,
+      previewTasks: previewTasks,
+      onTap: () => _openCategory(category),
+      onEdit: category.isSystem ? null : () => _editCategory(category),
+      onDelete: category.isSystem ? null : () => _deleteCategory(category),
     );
   }
 }

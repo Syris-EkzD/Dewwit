@@ -1,4 +1,6 @@
 import 'package:kedis/main.dart';
+import 'package:kedis/settings/home_layout_controller.dart';
+import 'package:kedis/settings/home_layout_preference_store.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
 import 'package:kedis/widgets/editable_task_item.dart';
@@ -12,6 +14,8 @@ void main() {
   late FakeTaskRepository tasks;
   late FakeCategoryRepository categories;
   late _FakeThemePreferenceStore themePreferenceStore;
+  late _FakeHomeLayoutPreferenceStore homeLayoutPreferenceStore;
+  late HomeLayoutController homeLayoutController;
   late int widgetRefreshCount;
 
   setUp(() {
@@ -19,6 +23,8 @@ void main() {
     tasks = repositories.tasks;
     categories = repositories.categories;
     themePreferenceStore = _FakeThemePreferenceStore();
+    homeLayoutPreferenceStore = _FakeHomeLayoutPreferenceStore();
+    homeLayoutController = HomeLayoutController(homeLayoutPreferenceStore);
     widgetRefreshCount = 0;
   });
 
@@ -49,6 +55,7 @@ void main() {
         taskRepository: tasks,
         categoryRepository: categories,
         themeController: ThemeController(themePreferenceStore),
+        homeLayoutController: homeLayoutController,
         widgetRefresh: () async {
           widgetRefreshCount += 1;
         },
@@ -98,6 +105,44 @@ void main() {
     expect(find.text('Four'), findsNothing);
     expect(find.text('Completed'), findsNothing);
     expect(find.text('+1 more'), findsOneWidget);
+    expect(find.text('4 active'), findsOneWidget);
+    expect(find.text('· 5 total'), findsOneWidget);
+    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
+  });
+
+  testWidgets('switches the home layout to List from Settings', (
+    WidgetTester tester,
+  ) async {
+    await pumpKedis(tester);
+    expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Settings'));
+    await pumpUntil(
+      tester,
+      () => find.text('Home layout').evaluate().isNotEmpty,
+      'Settings screen did not appear.',
+    );
+    await tester.tap(find.text('Home layout'));
+    await pumpUntil(
+      tester,
+      () => find.text('Choose home layout').evaluate().isNotEmpty,
+      'Home-layout picker did not appear.',
+    );
+    await tester.tap(find.text('List'));
+    await pumpUntil(
+      tester,
+      () => homeLayoutController.layoutMode == HomeLayoutMode.list,
+      'Home-layout preference did not update.',
+    );
+    await tester.pageBack();
+    await pumpUntil(
+      tester,
+      () => find.byKey(const ValueKey('category-home-list')).evaluate().isNotEmpty,
+      'Home did not render the selected List layout.',
+    );
+
+    expect(homeLayoutPreferenceStore.savedLayoutMode, HomeLayoutMode.list);
+    expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
   });
 
   testWidgets('home quick capture creates a task in Inbox', (
@@ -532,5 +577,14 @@ class _FakeThemePreferenceStore extends ThemePreferenceStore {
   @override
   Future<void> save(ThemeMode themeMode) async {
     savedThemeMode = themeMode;
+  }
+}
+
+class _FakeHomeLayoutPreferenceStore extends HomeLayoutPreferenceStore {
+  HomeLayoutMode? savedLayoutMode;
+
+  @override
+  Future<void> save(HomeLayoutMode layoutMode) async {
+    savedLayoutMode = layoutMode;
   }
 }

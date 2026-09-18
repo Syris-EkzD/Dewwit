@@ -1,4 +1,6 @@
 import 'package:kedis/main.dart';
+import 'package:kedis/settings/home_layout_controller.dart';
+import 'package:kedis/settings/home_layout_preference_store.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
@@ -46,6 +48,9 @@ void main() {
         taskRepository: tasks,
         categoryRepository: categories,
         themeController: ThemeController(_FakeThemePreferenceStore()),
+        homeLayoutController: HomeLayoutController(
+          HomeLayoutPreferenceStore(),
+        ),
         widgetRefresh: () async {
           widgetRefreshCount += 1;
         },
