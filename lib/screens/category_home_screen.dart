@@ -44,6 +44,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   List<Task> _tasks = const [];
   bool _isLoading = true;
   bool _hasLoadError = false;
+  bool _isCreationMenuExpanded = false;
 
   @override
   void initState() {
@@ -338,6 +339,20 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     }
   }
 
+  void _toggleCreationMenu() {
+    setState(() => _isCreationMenuExpanded = !_isCreationMenuExpanded);
+  }
+
+  Future<void> _createTaskFromMenu() async {
+    setState(() => _isCreationMenuExpanded = false);
+    await _quickCapture();
+  }
+
+  Future<void> _createCategoryFromMenu() async {
+    setState(() => _isCreationMenuExpanded = false);
+    await _createCategory();
+  }
+
   Widget _buildCategoryColorDot(TaskCategory category, {required Key key}) {
     return Container(
       key: key,
@@ -377,11 +392,6 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: _createCategory,
-            tooltip: 'Add category',
-            icon: const Icon(Icons.create_new_folder_outlined),
-          ),
           Padding(
             padding: const EdgeInsets.only(right: KedisSpacing.small),
             child: IconButton(
@@ -395,10 +405,41 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       body: SafeArea(child: _buildBody()),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: 8, bottom: 30),
-        child: FloatingActionButton(
-          onPressed: _quickCapture,
-          tooltip: 'Add task',
-          child: const Icon(Icons.add, size: 26),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (_isCreationMenuExpanded) ...[
+              FloatingActionButton.extended(
+                key: const ValueKey('home-create-category'),
+                heroTag: 'home-create-category',
+                onPressed: _createCategoryFromMenu,
+                icon: const Icon(Icons.create_new_folder_outlined),
+                label: const Text('Category'),
+              ),
+              const SizedBox(height: KedisSpacing.small),
+              FloatingActionButton.extended(
+                key: const ValueKey('home-create-task'),
+                heroTag: 'home-create-task',
+                onPressed: _createTaskFromMenu,
+                icon: const Icon(Icons.add_task),
+                label: const Text('Task'),
+              ),
+              const SizedBox(height: KedisSpacing.small),
+            ],
+            FloatingActionButton(
+              key: const ValueKey('home-create-menu'),
+              heroTag: 'home-create-menu',
+              onPressed: _toggleCreationMenu,
+              tooltip: _isCreationMenuExpanded
+                  ? 'Close creation menu'
+                  : 'Create',
+              child: Icon(
+                _isCreationMenuExpanded ? Icons.close : Icons.add,
+                size: 26,
+              ),
+            ),
+          ],
         ),
       ),
     );

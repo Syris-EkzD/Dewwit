@@ -69,6 +69,50 @@ void main() {
     );
   }
 
+  Future<void> expandHomeCreationMenu(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('home-create-menu')));
+    await pumpUntil(
+      tester,
+      () =>
+          find
+              .byKey(const ValueKey('home-create-task'))
+              .evaluate()
+              .isNotEmpty &&
+          find
+              .byKey(const ValueKey('home-create-category'))
+              .evaluate()
+              .isNotEmpty,
+      'Home creation menu did not expand.',
+    );
+  }
+
+  Future<void> openHomeTaskCapture(WidgetTester tester) async {
+    await expandHomeCreationMenu(tester);
+    await tester.tap(find.byKey(const ValueKey('home-create-task')));
+    await pumpUntil(
+      tester,
+      () => find
+          .byKey(const ValueKey('quick-capture-category'))
+          .evaluate()
+          .isNotEmpty,
+      'Quick-capture dialog did not appear.',
+    );
+    expect(find.byKey(const ValueKey('home-create-task')), findsNothing);
+    expect(find.byKey(const ValueKey('home-create-category')), findsNothing);
+  }
+
+  Future<void> openHomeCategoryCreation(WidgetTester tester) async {
+    await expandHomeCreationMenu(tester);
+    await tester.tap(find.byKey(const ValueKey('home-create-category')));
+    await pumpUntil(
+      tester,
+      () => find.text('Create category').evaluate().isNotEmpty,
+      'Create-category dialog did not appear.',
+    );
+    expect(find.byKey(const ValueKey('home-create-task')), findsNothing);
+    expect(find.byKey(const ValueKey('home-create-category')), findsNothing);
+  }
+
   Future<void> openCategory(WidgetTester tester, String name) async {
     await tester.tap(find.text(name).first);
     await pumpUntil(
@@ -78,6 +122,32 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Home creation FAB expands and collapses create actions', (
+    WidgetTester tester,
+  ) async {
+    await pumpKedis(tester);
+
+    expect(find.byKey(const ValueKey('home-create-menu')), findsOneWidget);
+    expect(find.byKey(const ValueKey('home-create-task')), findsNothing);
+    expect(find.byKey(const ValueKey('home-create-category')), findsNothing);
+    expect(find.byTooltip('Add category'), findsNothing);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+
+    await expandHomeCreationMenu(tester);
+
+    expect(find.text('Task'), findsOneWidget);
+    expect(find.text('Category'), findsOneWidget);
+    expect(find.byIcon(Icons.add_task), findsOneWidget);
+    expect(find.byIcon(Icons.create_new_folder_outlined), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('home-create-menu')));
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('home-create-task')), findsNothing);
+    expect(find.byKey(const ValueKey('home-create-category')), findsNothing);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+  });
 
   testWidgets('List keeps three display-only checkbox previews', (
     WidgetTester tester,
@@ -378,6 +448,8 @@ void main() {
   ) async {
     await pumpKedis(tester);
     expect(find.byKey(const ValueKey('category-home-list')), findsOneWidget);
+    expect(find.byTooltip('Add category'), findsNothing);
+    expect(find.byTooltip('Settings'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Settings'));
     await pumpUntil(
@@ -417,12 +489,7 @@ void main() {
     final inbox = await categories.getInbox();
     await pumpKedis(tester);
 
-    await tester.tap(find.byTooltip('Add task'));
-    await pumpUntil(
-      tester,
-      () => find.text('Add task').evaluate().isNotEmpty,
-      'Quick-capture dialog did not appear.',
-    );
+    await openHomeTaskCapture(tester);
     expect(
       tester
           .widget<Text>(
@@ -464,15 +531,7 @@ void main() {
     final school = await categories.createCategory('School', 0xFF6750A4);
     await pumpKedis(tester);
 
-    await tester.tap(find.byTooltip('Add task'));
-    await pumpUntil(
-      tester,
-      () => find
-          .byKey(const ValueKey('quick-capture-category'))
-          .evaluate()
-          .isNotEmpty,
-      'Quick-capture category selector did not appear.',
-    );
+    await openHomeTaskCapture(tester);
     await tester.tap(find.byKey(const ValueKey('quick-capture-category')));
     await tester.pumpAndSettle();
 
@@ -556,12 +615,7 @@ void main() {
   ) async {
     await pumpKedis(tester);
 
-    await tester.tap(find.byTooltip('Add task'));
-    await pumpUntil(
-      tester,
-      () => find.text('Add task').evaluate().isNotEmpty,
-      'Quick-capture dialog did not appear.',
-    );
+    await openHomeTaskCapture(tester);
     await tester.enterText(find.byType(TextField), '   ');
     await tester.tap(find.text('Add'));
     await tester.pump();
@@ -822,12 +876,7 @@ void main() {
   ) async {
     await pumpKedis(tester);
 
-    await tester.tap(find.byTooltip('Add category'));
-    await pumpUntil(
-      tester,
-      () => find.text('Create').evaluate().isNotEmpty,
-      'Create-category dialog did not appear.',
-    );
+    await openHomeCategoryCreation(tester);
     await tester.enterText(find.byType(TextField), 'School');
     await tester.tap(find.text('Create'));
     await pumpUntil(
