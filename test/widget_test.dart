@@ -151,11 +151,17 @@ void main() {
     final inbox = await categories.getInbox();
     await pumpKedis(tester);
 
-    await tester.tap(find.byTooltip('Add task to Inbox'));
+    await tester.tap(find.byTooltip('Add task'));
     await pumpUntil(
       tester,
-      () => find.text('Add to Inbox').evaluate().isNotEmpty,
+      () => find.text('Add task').evaluate().isNotEmpty,
       'Quick-capture dialog did not appear.',
+    );
+    expect(
+      tester.widget<DropdownButton<int>>(
+        find.byKey(const ValueKey('quick-capture-category')),
+      ).value,
+      inbox.id,
     );
     await tester.enterText(find.byType(TextField), '  Quick capture  ');
     await tester.tap(find.text('Add'));
@@ -171,7 +177,66 @@ void main() {
     expect(created.categoryId, inbox.id);
     expect(widgetRefreshCount, 1);
     expect(find.text('Quick capture'), findsOneWidget);
-    expect(find.text('Add to Inbox'), findsNothing);
+    expect(find.text('Add task'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home quick capture creates in a selected category', (
+    WidgetTester tester,
+  ) async {
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    await pumpKedis(tester);
+
+    await tester.tap(find.byTooltip('Add task'));
+    await pumpUntil(
+      tester,
+      () => find.byKey(const ValueKey('quick-capture-category')).evaluate().isNotEmpty,
+      'Quick-capture category selector did not appear.',
+    );
+    await tester.tap(find.byKey(const ValueKey('quick-capture-category')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('School').last);
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '  Database proposal  ');
+    await tester.tap(find.text('Add'));
+    await pumpUntil(
+      tester,
+      () => find.text('Database proposal').evaluate().isNotEmpty,
+      'Quick-capture task did not appear in the selected category.',
+    );
+    await tester.pumpAndSettle();
+
+    final created = (await tasks.getTasks(categoryId: school.id)).single;
+    expect(created.title, 'Database proposal');
+    expect(created.categoryId, school.id);
+    expect(widgetRefreshCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home quick capture rejects empty titles and cancels safely', (
+    WidgetTester tester,
+  ) async {
+    await pumpKedis(tester);
+
+    await tester.tap(find.byTooltip('Add task'));
+    await pumpUntil(
+      tester,
+      () => find.text('Add task').evaluate().isNotEmpty,
+      'Quick-capture dialog did not appear.',
+    );
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.tap(find.text('Add'));
+    await tester.pump();
+
+    expect(find.text('Add task'), findsOneWidget);
+    expect(await tasks.getTasks(), isEmpty);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add task'), findsNothing);
+    expect(await tasks.getTasks(), isEmpty);
+    expect(widgetRefreshCount, 0);
     expect(tester.takeException(), isNull);
   });
 

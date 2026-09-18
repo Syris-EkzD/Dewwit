@@ -103,46 +103,96 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
   }
 
   Future<void> _quickCapture() async {
+    TaskCategory inbox;
+    try {
+      inbox = await widget.categoryRepository.getInbox();
+    } on Object {
+      if (mounted) _showMessage('Could not load categories.');
+      return;
+    }
+    if (!mounted) return;
+
     var draftTitle = '';
-    final title = await showDialog<String>(
+    var selectedCategoryId = inbox.id;
+    final result = await showDialog<_QuickCaptureResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add to Inbox'),
-        content: TextField(
-          autofocus: true,
-          minLines: 1,
-          maxLines: null,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(hintText: 'Task title'),
-          onChanged: (value) => draftTitle = value,
-          onSubmitted: (value) {
-            final normalized = value.trim();
-            if (normalized.isNotEmpty) {
-              Navigator.of(context).pop(normalized);
-            }
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final normalized = draftTitle.trim();
-              if (normalized.isNotEmpty) {
-                Navigator.of(context).pop(normalized);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          void submit(String rawTitle) {
+            final normalizedTitle = rawTitle.trim();
+            if (normalizedTitle.isEmpty) return;
+            Navigator.of(dialogContext).pop(
+              _QuickCaptureResult(
+                title: normalizedTitle,
+                categoryId: selectedCategoryId,
+              ),
+            );
+          }
+
+          return AlertDialog(
+            title: const Text('Add task'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  autofocus: true,
+                  minLines: 1,
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(hintText: 'Task title'),
+                  onChanged: (value) => draftTitle = value,
+                  onSubmitted: submit,
+                ),
+                const SizedBox(height: KedisSpacing.medium),
+                InputDecorator(
+                  decoration: const InputDecoration(labelText: 'Category'),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      key: const ValueKey('quick-capture-category'),
+                      value: selectedCategoryId,
+                      isExpanded: true,
+                      items: [
+                        for (final category in _categories)
+                          DropdownMenuItem<int>(
+                            value: category.id,
+                            child: Text(
+                              category.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (categoryId) {
+                        if (categoryId == null) return;
+                        setDialogState(
+                          () => selectedCategoryId = categoryId,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => submit(draftTitle),
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (title == null || !mounted) return;
+    if (result == null || !mounted) return;
 
     try {
-      await widget.taskRepository.createTask(title);
+      await widget.taskRepository.createTask(
+        result.title,
+        categoryId: result.categoryId,
+      );
       await widget.widgetRefresh();
       await _loadOverview();
     } on Object {
@@ -282,7 +332,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
         padding: const EdgeInsets.only(right: 8, bottom: 30),
         child: FloatingActionButton(
           onPressed: _quickCapture,
-          tooltip: 'Add task to Inbox',
+          tooltip: 'Add task',
           child: const Icon(Icons.add, size: 26),
         ),
       ),
@@ -399,4 +449,15 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       onDelete: category.isSystem ? null : () => _deleteCategory(category),
     );
   }
+}
+
+
+class _QuickCaptureResult {
+  const _QuickCaptureResult({
+    required this.title,
+    required this.categoryId,
+  });
+
+  final String title;
+  final int categoryId;
 }
