@@ -144,29 +144,77 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
                   onSubmitted: submit,
                 ),
                 const SizedBox(height: KedisSpacing.medium),
-                InputDecorator(
-                  decoration: const InputDecoration(labelText: 'Category'),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int>(
-                      key: const ValueKey('quick-capture-category'),
-                      value: selectedCategoryId,
-                      isExpanded: true,
-                      items: [
-                        for (final category in _categories)
-                          DropdownMenuItem<int>(
-                            value: category.id,
-                            child: Text(
-                              category.name,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                MenuAnchor(
+                  menuChildren: [
+                    for (final category in _categories)
+                      MenuItemButton(
+                        key: ValueKey(
+                          'quick-capture-category-option-${category.id}',
+                        ),
+                        leadingIcon: _buildCategoryColorDot(
+                          category,
+                          key: ValueKey(
+                            'quick-capture-category-option-color-${category.id}',
                           ),
-                      ],
-                      onChanged: (categoryId) {
-                        if (categoryId == null) return;
-                        setDialogState(() => selectedCategoryId = categoryId);
+                        ),
+                        onPressed: () {
+                          setDialogState(
+                            () => selectedCategoryId = category.id,
+                          );
+                        },
+                        child: Text(
+                          category.name,
+                          key: ValueKey(
+                            'quick-capture-category-option-label-${category.id}',
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  builder: (context, menuController, child) {
+                    final selectedCategory = _categories.firstWhere(
+                      (category) => category.id == selectedCategoryId,
+                      orElse: () => inbox,
+                    );
+                    return InkWell(
+                      key: const ValueKey('quick-capture-category'),
+                      borderRadius: BorderRadius.circular(KedisRadii.small),
+                      onTap: () {
+                        if (menuController.isOpen) {
+                          menuController.close();
+                        } else {
+                          menuController.open();
+                        }
                       },
-                    ),
-                  ),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          suffixIcon: Icon(Icons.arrow_drop_down),
+                        ),
+                        child: Row(
+                          children: [
+                            _buildCategoryColorDot(
+                              selectedCategory,
+                              key: const ValueKey(
+                                'quick-capture-selected-category-color',
+                              ),
+                            ),
+                            const SizedBox(width: KedisSpacing.small),
+                            Expanded(
+                              child: Text(
+                                selectedCategory.name,
+                                key: const ValueKey(
+                                  'quick-capture-selected-category',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -288,6 +336,18 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     }
   }
 
+  Widget _buildCategoryColorDot(TaskCategory category, {required Key key}) {
+    return Container(
+      key: key,
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: Color(category.colorValue),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
@@ -402,6 +462,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
                   child: _buildCategoryCard(
                     category,
                     tasksByCategory[category.id] ?? const [],
+                    isGridLayout: true,
                   ),
                 ),
             ],
@@ -433,7 +494,11 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     );
   }
 
-  Widget _buildCategoryCard(TaskCategory category, List<Task> categoryTasks) {
+  Widget _buildCategoryCard(
+    TaskCategory category,
+    List<Task> categoryTasks, {
+    bool isGridLayout = false,
+  }) {
     final activeTasks = categoryTasks
         .where((task) => !task.isCompleted)
         .toList(growable: false);
@@ -447,6 +512,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
       activeCount: activeTasks.length,
       totalCount: categoryTasks.length,
       previewTasks: previewTasks,
+      isGridLayout: isGridLayout,
       onTap: () => _openCategory(category),
       onEdit: category.isSystem ? null : () => _editCategory(category),
       onDelete: category.isSystem ? null : () => _deleteCategory(category),

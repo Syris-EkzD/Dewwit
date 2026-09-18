@@ -3,6 +3,7 @@ import 'package:kedis/settings/home_layout_controller.dart';
 import 'package:kedis/settings/home_layout_preference_store.dart';
 import 'package:kedis/settings/theme_controller.dart';
 import 'package:kedis/settings/theme_preference_store.dart';
+import 'package:kedis/widgets/category_card.dart';
 import 'package:kedis/widgets/editable_task_item.dart';
 import 'package:kedis/widgets/editing_task_item.dart';
 import 'package:flutter/material.dart';
@@ -113,6 +114,125 @@ void main() {
     expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
   });
 
+  testWidgets('grid cards keep aligned fixed geometry with long titles', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final inbox = await categories.getInbox();
+    final short = await categories.createCategory('Short', 0xFF6750A4);
+    final multiLine = await categories.createCategory(
+      'A category title that wraps across multiple lines cleanly',
+      0xFF006C4C,
+    );
+    final excessive = await categories.createCategory(
+      'An extremely long category title that keeps going well beyond five lines '
+      'so the grid card must ellipsize it instead of allowing the content to '
+      'overflow into the counts and task preview area below',
+      0xFF9C4146,
+    );
+
+    for (final title in ['One', 'Two', 'Three', 'Four']) {
+      await tasks.createTask(title, categoryId: short.id);
+      await tasks.createTask('Long $title', categoryId: multiLine.id);
+    }
+
+    await pumpKedis(tester);
+
+    final inboxCard = find.byKey(ValueKey('category-card-${inbox.id}'));
+    final shortCard = find.byKey(ValueKey('category-card-${short.id}'));
+    final multiLineCard = find.byKey(ValueKey('category-card-${multiLine.id}'));
+    final excessiveCard = find.byKey(ValueKey('category-card-${excessive.id}'));
+
+    for (final card in [inboxCard, shortCard, multiLineCard, excessiveCard]) {
+      expect(tester.getSize(card).height, CategoryCard.gridHeight);
+    }
+
+    expect(tester.getSize(inboxCard).width, tester.getSize(shortCard).width);
+    expect(tester.getTopLeft(inboxCard).dy, tester.getTopLeft(shortCard).dy);
+    expect(
+      tester.getTopLeft(inboxCard).dx,
+      lessThan(tester.getTopLeft(shortCard).dx),
+    );
+
+    final shortTitle = tester.widget<Text>(
+      find.descendant(of: shortCard, matching: find.text('Short')),
+    );
+    final multiLineTitle = tester.widget<Text>(
+      find.descendant(of: multiLineCard, matching: find.text(multiLine.name)),
+    );
+    final excessiveTitle = tester.widget<Text>(
+      find.descendant(of: excessiveCard, matching: find.text(excessive.name)),
+    );
+
+    expect(shortTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(multiLineTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(excessiveTitle.maxLines, CategoryCard.gridTitleMaxLines);
+    expect(excessiveTitle.overflow, TextOverflow.ellipsis);
+    expect(
+      tester
+          .getSize(
+            find.descendant(
+              of: multiLineCard,
+              matching: find.text(multiLine.name),
+            ),
+          )
+          .height,
+      greaterThan(
+        tester
+            .getSize(
+              find.descendant(of: shortCard, matching: find.text('Short')),
+            )
+            .height,
+      ),
+    );
+
+    final shortTop = tester.getTopLeft(shortCard).dy;
+    final multiLineTop = tester.getTopLeft(multiLineCard).dy;
+    final shortCountOffset =
+        tester
+            .getTopLeft(
+              find.descendant(of: shortCard, matching: find.text('4 active')),
+            )
+            .dy -
+        shortTop;
+    final multiLineCountOffset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: multiLineCard,
+                matching: find.text('4 active'),
+              ),
+            )
+            .dy -
+        multiLineTop;
+    final shortPreviewOffset =
+        tester
+            .getTopLeft(
+              find.descendant(of: shortCard, matching: find.text('One')),
+            )
+            .dy -
+        shortTop;
+    final multiLinePreviewOffset =
+        tester
+            .getTopLeft(
+              find.descendant(
+                of: multiLineCard,
+                matching: find.text('Long One'),
+              ),
+            )
+            .dy -
+        multiLineTop;
+
+    expect(shortCountOffset, multiLineCountOffset);
+    expect(shortPreviewOffset, multiLinePreviewOffset);
+    expect(find.text('Four'), findsNothing);
+    expect(find.text('Long Four'), findsNothing);
+    expect(find.text('+1 more'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('completed-only category still reports its total', (
     WidgetTester tester,
   ) async {
@@ -184,12 +304,20 @@ void main() {
     );
     expect(
       tester
-          .widget<DropdownButton<int>>(
-            find.byKey(const ValueKey('quick-capture-category')),
+          .widget<Text>(
+            find.byKey(const ValueKey('quick-capture-selected-category')),
           )
-          .value,
-      inbox.id,
+          .data,
+      inbox.name,
     );
+    final selectedColor = tester.widget<Container>(
+      find.byKey(const ValueKey('quick-capture-selected-category-color')),
+    );
+    expect(
+      (selectedColor.decoration! as BoxDecoration).color,
+      Color(inbox.colorValue),
+    );
+    expect(tester.widget<TextField>(find.byType(TextField)).controller, isNull);
     await tester.enterText(find.byType(TextField), '  Quick capture  ');
     await tester.tap(find.text('Add'));
     await pumpUntil(
@@ -211,6 +339,7 @@ void main() {
   testWidgets('home quick capture creates in a selected category', (
     WidgetTester tester,
   ) async {
+    final inbox = await categories.getInbox();
     final school = await categories.createCategory('School', 0xFF6750A4);
     await pumpKedis(tester);
 
@@ -225,8 +354,66 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('quick-capture-category')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('School').last);
-    await tester.pump();
+
+    expect(
+      find.byKey(ValueKey('quick-capture-category-option-${inbox.id}')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(ValueKey('quick-capture-category-option-${school.id}')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(
+              ValueKey('quick-capture-category-option-label-${school.id}'),
+            ),
+          )
+          .data,
+      school.name,
+    );
+    final optionColor = tester.widget<Container>(
+      find.byKey(ValueKey('quick-capture-category-option-color-${school.id}')),
+    );
+    expect(
+      (optionColor.decoration! as BoxDecoration).color,
+      Color(school.colorValue),
+    );
+
+    await tester.tap(
+      find.byKey(ValueKey('quick-capture-category-option-${school.id}')),
+    );
+    await pumpUntil(tester, () {
+      final selectedCategory = find.byKey(
+        const ValueKey('quick-capture-selected-category'),
+      );
+      return selectedCategory.evaluate().isNotEmpty &&
+          tester.widget<Text>(selectedCategory).data == school.name &&
+          find
+              .byKey(ValueKey('quick-capture-category-option-${school.id}'))
+              .evaluate()
+              .isEmpty &&
+          find.text('Add task').evaluate().isNotEmpty;
+    }, 'Selected category did not update after the menu closed.');
+
+    expect(find.text('Add task'), findsOneWidget);
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey('quick-capture-selected-category')),
+          )
+          .data,
+      school.name,
+    );
+    final selectedColor = tester.widget<Container>(
+      find.byKey(const ValueKey('quick-capture-selected-category-color')),
+    );
+    expect(
+      (selectedColor.decoration! as BoxDecoration).color,
+      Color(school.colorValue),
+    );
+
     await tester.enterText(find.byType(TextField), '  Database proposal  ');
     await tester.tap(find.text('Add'));
     await pumpUntil(
