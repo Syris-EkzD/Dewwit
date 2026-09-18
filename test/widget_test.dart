@@ -79,11 +79,12 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('List keeps the three-task active preview', (
+  testWidgets('List keeps three display-only checkbox previews', (
     WidgetTester tester,
   ) async {
     final school = await categories.createCategory('School', 0xFF6750A4);
-    for (final title in ['One', 'Two', 'Three', 'Four']) {
+    final firstPreview = await tasks.createTask('One', categoryId: school.id);
+    for (final title in ['Two', 'Three', 'Four']) {
       await tasks.createTask(title, categoryId: school.id);
     }
     final completed = await tasks.createTask(
@@ -112,9 +113,31 @@ void main() {
     expect(find.text('+1 more'), findsOneWidget);
     expect(find.text('4 active'), findsOneWidget);
     expect(find.text('· 5 total'), findsOneWidget);
+
+    final previewCheckbox = find.byKey(
+      ValueKey('task-preview-checkbox-${firstPreview.id}'),
+    );
+    expect(previewCheckbox, findsOneWidget);
+    expect(
+      tester.widget<Icon>(previewCheckbox).icon,
+      Icons.check_box_outline_blank,
+    );
+    expect(
+      find.ancestor(of: previewCheckbox, matching: find.byType(Checkbox)),
+      findsNothing,
+    );
+
+    await tester.tap(previewCheckbox);
+    await tester.pumpAndSettle();
+
+    final persisted = (await tasks.getTasks(categoryId: school.id))
+        .firstWhere((task) => task.id == firstPreview.id);
+    expect(persisted.isCompleted, isFalse);
+    expect(persisted.completedAt, isNull);
+    expect(widgetRefreshCount, 0);
   });
 
-  testWidgets('Grid stays compact and uses two columns on a phone', (
+  testWidgets('Grid cards size naturally up to the maximum height', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(360, 800));
@@ -160,16 +183,23 @@ void main() {
       wrappedCard,
       excessiveCard,
     ]) {
-      expect(tester.getSize(card).height, CategoryCard.gridHeight);
+      expect(
+        tester.getSize(card).height,
+        lessThanOrEqualTo(CategoryCard.gridMaxHeight),
+      );
     }
+    expect(
+      tester.getSize(inboxCard).height,
+      lessThan(tester.getSize(programmingCard).height),
+    );
+    expect(
+      tester.getSize(excessiveCard).height,
+      lessThan(CategoryCard.gridMaxHeight),
+    );
 
     expect(
       tester.getSize(inboxCard).width,
       tester.getSize(programmingCard).width,
-    );
-    expect(
-      tester.getTopLeft(inboxCard).dy,
-      tester.getTopLeft(programmingCard).dy,
     );
     expect(
       tester.getTopLeft(inboxCard).dx,
@@ -196,53 +226,7 @@ void main() {
     expect(wrappedTitle.maxLines, CategoryCard.gridTitleMaxLines);
     expect(excessiveTitle.maxLines, CategoryCard.gridTitleMaxLines);
     expect(excessiveTitle.overflow, TextOverflow.ellipsis);
-    expect(find.text('Programming'), findsOneWidget);
 
-    final programmingTop = tester.getTopLeft(programmingCard).dy;
-    final wrappedTop = tester.getTopLeft(wrappedCard).dy;
-    final programmingCountOffset =
-        tester
-            .getTopLeft(
-              find.descendant(
-                of: programmingCard,
-                matching: find.text('4 active'),
-              ),
-            )
-            .dy -
-        programmingTop;
-    final wrappedCountOffset =
-        tester
-            .getTopLeft(
-              find.descendant(
-                of: wrappedCard,
-                matching: find.text('4 active'),
-              ),
-            )
-            .dy -
-        wrappedTop;
-    final programmingPreviewOffset =
-        tester
-            .getTopLeft(
-              find.descendant(
-                of: programmingCard,
-                matching: find.text('One'),
-              ),
-            )
-            .dy -
-        programmingTop;
-    final wrappedPreviewOffset =
-        tester
-            .getTopLeft(
-              find.descendant(
-                of: wrappedCard,
-                matching: find.text('Long One'),
-              ),
-            )
-            .dy -
-        wrappedTop;
-
-    expect(programmingCountOffset, wrappedCountOffset);
-    expect(programmingPreviewOffset, wrappedPreviewOffset);
     expect(
       find.descendant(of: programmingCard, matching: find.text('One')),
       findsOneWidget,
@@ -268,11 +252,32 @@ void main() {
       findsOneWidget,
     );
 
-    final gridScroll = tester.widget<SingleChildScrollView>(
-      find.byKey(const ValueKey('category-home-grid')),
+    final previewCheckboxes = find.descendant(
+      of: programmingCard,
+      matching: find.byIcon(Icons.check_box_outline_blank),
     );
-    final gridPadding = gridScroll.padding! as EdgeInsets;
-    expect(gridPadding.bottom, greaterThan(86));
+    expect(previewCheckboxes, findsNWidgets(2));
+
+    final actionButton = find.descendant(
+      of: programmingCard,
+      matching: find.byTooltip('Category actions'),
+    );
+    expect(actionButton, findsOneWidget);
+    final titleCenter = tester.getCenter(
+      find.descendant(
+        of: programmingCard,
+        matching: find.text(programming.name),
+      ),
+    );
+    final actionCenter = tester.getCenter(actionButton);
+    expect((titleCenter.dy - actionCenter.dy).abs(), lessThan(12));
+
+    await tester.tap(actionButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit category'), findsOneWidget);
+    expect(find.text('Delete category'), findsOneWidget);
+    expect(find.text('E'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -302,8 +307,14 @@ void main() {
       tester.getTopLeft(schoolCard).dy,
       greaterThan(tester.getTopLeft(inboxCard).dy),
     );
-    expect(tester.getSize(inboxCard).height, CategoryCard.gridHeight);
-    expect(tester.getSize(schoolCard).height, CategoryCard.gridHeight);
+    expect(
+      tester.getSize(inboxCard).height,
+      lessThanOrEqualTo(CategoryCard.gridMaxHeight),
+    );
+    expect(
+      tester.getSize(schoolCard).height,
+      lessThanOrEqualTo(CategoryCard.gridMaxHeight),
+    );
     expect(tester.takeException(), isNull);
   });
 

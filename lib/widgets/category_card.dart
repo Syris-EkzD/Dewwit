@@ -16,12 +16,11 @@ class CategoryCard extends StatelessWidget {
     super.key,
   });
 
-  static const gridHeight = 200.0;
-  static const gridTitleHeight = 40.0;
+  static const gridMaxHeight = 200.0;
   static const gridTitleMaxLines = 2;
-  static const _gridActionSize = 32.0;
+  static const _gridActionExtent = 40.0;
   static const _gridActionIconSize = 20.0;
-  static const _gridCountHeight = 20.0;
+  static const _previewCheckboxSize = 18.0;
 
   final TaskCategory category;
   final int activeCount;
@@ -38,13 +37,9 @@ class CategoryCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final hiddenCount = activeCount - previewTasks.length;
-    final titleRow = _buildTitleRow(
-      textTheme,
-      maxLines: isGridLayout ? gridTitleMaxLines : 1,
-      alignToTop: isGridLayout,
-      compact: isGridLayout,
-    );
-    final counts = _buildCounts(textTheme, colorScheme, accent);
+    final titleStyle = isGridLayout
+        ? textTheme.titleSmall
+        : textTheme.titleMedium;
 
     final card = Card(
       margin: EdgeInsets.zero,
@@ -62,20 +57,27 @@ class CategoryCard extends StatelessWidget {
             KedisSpacing.medium,
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (isGridLayout)
-                SizedBox(height: gridTitleHeight, child: titleRow)
-              else
-                titleRow,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      category.name,
+                      maxLines: isGridLayout ? gridTitleMaxLines : 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (onEdit != null && onDelete != null)
+                    _buildActionMenu()
+                  else
+                    const SizedBox(width: KedisSpacing.small),
+                ],
+              ),
               const SizedBox(height: KedisSpacing.xSmall),
-              if (isGridLayout)
-                SizedBox(
-                  height: _gridCountHeight,
-                  child: Align(alignment: Alignment.centerLeft, child: counts),
-                )
-              else
-                counts,
+              _buildCounts(textTheme, colorScheme, accent),
               if (previewTasks.isEmpty) ...[
                 const SizedBox(height: KedisSpacing.small),
                 Text(
@@ -92,15 +94,12 @@ class CategoryCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 7),
-                          child: Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: accent,
-                              shape: BoxShape.circle,
-                            ),
+                        ExcludeSemantics(
+                          child: Icon(
+                            Icons.check_box_outline_blank,
+                            key: ValueKey('task-preview-checkbox-${task.id}'),
+                            size: _previewCheckboxSize,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(width: KedisSpacing.small),
@@ -137,66 +136,43 @@ class CategoryCard extends StatelessWidget {
     if (!isGridLayout) {
       return card;
     }
-    return SizedBox(height: gridHeight, child: card);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: gridMaxHeight),
+      child: card,
+    );
   }
 
-  Widget _buildTitleRow(
-    TextTheme textTheme, {
-    required int maxLines,
-    required bool alignToTop,
-    required bool compact,
-  }) {
-    final titleStyle = compact ? textTheme.titleSmall : textTheme.titleMedium;
-
-    return Row(
-      crossAxisAlignment: alignToTop
-          ? CrossAxisAlignment.start
-          : CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Text(
-            category.name,
-            maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
-            style: titleStyle?.copyWith(fontWeight: FontWeight.w700),
-          ),
+  Widget _buildActionMenu() {
+    final menu = PopupMenuButton<_CategoryCardAction>(
+      tooltip: 'Category actions',
+      padding: isGridLayout ? EdgeInsets.zero : const EdgeInsets.all(8),
+      iconSize: isGridLayout ? _gridActionIconSize : null,
+      onSelected: (action) {
+        switch (action) {
+          case _CategoryCardAction.edit:
+            onEdit?.call();
+            break;
+          case _CategoryCardAction.delete:
+            onDelete?.call();
+            break;
+        }
+      },
+      itemBuilder: (context) => const [
+        PopupMenuItem(
+          value: _CategoryCardAction.edit,
+          child: Text('Edit category'),
         ),
-        if (onEdit != null && onDelete != null)
-          PopupMenuButton<_CategoryCardAction>(
-            tooltip: 'Category actions',
-            padding: compact ? EdgeInsets.zero : const EdgeInsets.all(8),
-            iconSize: compact ? _gridActionIconSize : null,
-            constraints: compact
-                ? const BoxConstraints.tightFor(
-                    width: _gridActionSize,
-                    height: _gridActionSize,
-                  )
-                : null,
-            onSelected: (action) {
-              switch (action) {
-                case _CategoryCardAction.edit:
-                  onEdit?.call();
-                  break;
-                case _CategoryCardAction.delete:
-                  onDelete?.call();
-                  break;
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: _CategoryCardAction.edit,
-                child: Text('Edit category'),
-              ),
-              PopupMenuItem(
-                value: _CategoryCardAction.delete,
-                child: Text('Delete category'),
-              ),
-            ],
-          )
-        else
-          const SizedBox(width: KedisSpacing.small),
+        PopupMenuItem(
+          value: _CategoryCardAction.delete,
+          child: Text('Delete category'),
+        ),
       ],
     );
+
+    if (!isGridLayout) {
+      return menu;
+    }
+    return SizedBox.square(dimension: _gridActionExtent, child: menu);
   }
 
   Widget _buildCounts(
