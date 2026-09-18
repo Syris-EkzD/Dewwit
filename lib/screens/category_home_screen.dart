@@ -274,6 +274,22 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
     }
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SettingsScreen(
+          themeController: widget.themeController,
+          homeLayoutController: widget.homeLayoutController,
+          taskRepository: widget.taskRepository,
+          widgetRefresh: widget.widgetRefresh,
+        ),
+      ),
+    );
+    if (mounted) {
+      await _loadOverview();
+    }
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -312,15 +328,7 @@ class _CategoryHomeScreenState extends State<CategoryHomeScreen>
           Padding(
             padding: const EdgeInsets.only(right: KedisSpacing.small),
             child: IconButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) => SettingsScreen(
-                    themeController: widget.themeController,
-                    homeLayoutController: widget.homeLayoutController,
-                  ),
-                ),
-              ),
+              onPressed: _openSettings,
               tooltip: 'Settings',
               icon: const Icon(Icons.settings_outlined),
             ),

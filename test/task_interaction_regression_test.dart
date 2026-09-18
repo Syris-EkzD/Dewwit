@@ -213,7 +213,7 @@ void main() {
     );
   });
 
-  testWidgets('leaves a task deleted after the Undo snackbar expires', (
+  testWidgets('leaves a task in Trash after the Undo snackbar expires', (
     WidgetTester tester,
   ) async {
     await tasks.createTask('Delete permanently');
@@ -243,6 +243,7 @@ void main() {
 
     expect(find.text('Delete permanently'), findsNothing);
     expect(await tasks.getTasks(), isEmpty);
+    expect((await tasks.getDeletedTasks()).single.title, 'Delete permanently');
     expect(widgetRefreshCount, 1);
   });
 

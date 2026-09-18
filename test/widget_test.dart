@@ -94,6 +94,11 @@ void main() {
       isCompleted: true,
       completedAt: DateTime.utc(2026, 9, 16, 12),
     );
+    final trashed = await tasks.createTask(
+      'Trashed',
+      categoryId: school.id,
+    );
+    await tasks.deleteTask(trashed.id);
 
     await pumpKedis(tester);
 
@@ -104,10 +109,33 @@ void main() {
     expect(find.text('Three'), findsOneWidget);
     expect(find.text('Four'), findsNothing);
     expect(find.text('Completed'), findsNothing);
+    expect(find.text('Trashed'), findsNothing);
     expect(find.text('+1 more'), findsOneWidget);
     expect(find.text('4 active'), findsOneWidget);
     expect(find.text('· 5 total'), findsOneWidget);
     expect(find.byKey(const ValueKey('category-home-grid')), findsOneWidget);
+  });
+
+  testWidgets('completed-only category still reports its total', (
+    WidgetTester tester,
+  ) async {
+    final school = await categories.createCategory('School', 0xFF6750A4);
+    final completed = await tasks.createTask(
+      'Finished',
+      categoryId: school.id,
+    );
+    await tasks.setTaskCompletion(
+      completed.id,
+      isCompleted: true,
+      completedAt: DateTime.utc(2026, 9, 18, 12),
+    );
+
+    await pumpKedis(tester);
+
+    expect(find.text('0 active'), findsWidgets);
+    expect(find.text('· 1 total'), findsOneWidget);
+    expect(find.text('No active tasks'), findsWidgets);
+    expect(find.text('Finished'), findsNothing);
   });
 
   testWidgets('switches the home layout to List from Settings', (
